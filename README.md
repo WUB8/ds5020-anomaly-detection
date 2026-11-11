@@ -2,8 +2,8 @@
 
 DS5020 Intro Linear Algebra & Probability — Final Project (Topic 9)
 
-We fit a multivariate normal model N(μ, Σ) to machine/robot sensor readings from normal
-operation, score new readings with the squared Mahalanobis distance
+We fit a multivariate normal model N(μ, Σ) to a genuine user's keystroke timings
+(log hold times and latencies), score new typings with the squared Mahalanobis distance
 d² = (x − μ)ᵀ Σ⁻¹ (x − μ), and flag a reading as anomalous when d² exceeds the
 (1 − α) quantile of the χ²_d distribution. Everything is implemented from scratch in NumPy.
 
@@ -44,5 +44,18 @@ The random seed is fixed (`np.random.default_rng(0)`), so everyone gets the same
 
 ## Data
 
-The real sensor dataset is not stored in Git. Download instructions will be added here once
-the dataset is confirmed; place the raw files in `data/`.
+We use the **CMU Keystroke Dynamics Benchmark** (Killourhy and Maxion, 2009): 51 subjects each
+typed the password `.tie5Roanl` 400 times; each row has 31 timing features (hold times and
+key-to-key latencies). Source: https://www.cs.cmu.edu/~keystroke/
+
+The raw file is not stored in Git. Download it into `data/`:
+
+```bash
+curl -L -o data/DSL-StrongPasswordData.csv https://www.cs.cmu.edu/~keystroke/DSL-StrongPasswordData.csv
+```
+
+Then load and describe it (size, types, missing values, summary statistics, two plots in `figures/`):
+
+```bash
+python3 src/load.py
+```

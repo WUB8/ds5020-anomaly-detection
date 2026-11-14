@@ -1,424 +1,618 @@
 \documentclass[11pt]{article}
-
-% ---------------------------------------------------------------------------
-% Packages
-% ---------------------------------------------------------------------------
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath, amssymb, amsthm, bm}
-\usepackage{booktabs, tabularx, array}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{enumitem}
-\usepackage{xcolor}
-\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue]{hyperref}
+\usepackage[hidelinks]{hyperref}
 
-% Overleaf: upload the PNGs from the repo's figures/ folder into a folder named figures/
-\graphicspath{{figures/}{../../figures/}}
-
-% ---------------------------------------------------------------------------
-% Theorem environments
-% ---------------------------------------------------------------------------
-\theoremstyle{definition}
-\newtheorem{definition}{Definition}[section]
-\newtheorem{assumption}{Assumption}
-\theoremstyle{plain}
+% ---------- theorem environments (numbered within section) ----------
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}{Assumption}
 
-% ---------------------------------------------------------------------------
-% Macros
-% ---------------------------------------------------------------------------
+% ---------- macros ----------
 \newcommand{\R}{\mathbb{R}}
-\newcommand{\E}{\mathbb{E}}
-\newcommand{\Var}{\operatorname{Var}}
-\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\T}{^{\top}}
 \newcommand{\tr}{\operatorname{tr}}
-\newcommand{\x}{\mathbf{x}}
-\newcommand{\z}{\mathbf{z}}
-\newcommand{\bmu}{\bm{\mu}}
-\newcommand{\hmu}{\hat{\bm{\mu}}}
-\newcommand{\hSigma}{\hat{\Sigma}}
-\newcommand{\one}{\mathbf{1}}
-\newcommand{\Normal}{\mathcal{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\rul}[1]{\text{[#1]}}
+\newcommand{\owner}[2]{\par\medskip\noindent\textbf{Owner:} #1 \quad$|$\quad \textbf{Checked by:} #2\par\medskip}
+% Includes a figure if the file exists; otherwise draws a labelled box so the document still compiles.
+% Looks in figures/ (Overleaf) and ../../figures/ (repo: docs/report/main.tex); draws a box if the file is missing.
+\newcommand{\fig}[2]{\IfFileExists{figures/#2}{\includegraphics[width=#1]{figures/#2}}{\IfFileExists{#2}{\includegraphics[width=#1]{#2}}{\IfFileExists{Figures/#2}{\includegraphics[width=#1]{Figures/#2}}{\IfFileExists{../../figures/#2}{\includegraphics[width=#1]{../../figures/#2}}{\fbox{\parbox[c][4cm][c]{#1}{\centering\small missing file: \texttt{\detokenize{#2}}}}}}}}}
 
-% Mark each step of a proof with the rule used:  \rulenote{linearity of expectation}
-\newcommand{\rulenote}[1]{\quad\text{\small\color{gray}[#1]}}
-% Owner / checker line under every derivation
-\newcommand{\signoff}[2]{\par\smallskip\noindent\textit{Owner: #1 \quad\textbar\quad Checked by: #2}\par\medskip}
-% Placeholder text
-\newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
+\sloppy
 
-% ---------------------------------------------------------------------------
-\title{DS5020 Final Project -- Iteration 2\\[4pt]
+\title{DS5020 Final Project: Iteration 2\\[4pt]
 \large Anomaly Detection with the Multivariate Normal Distribution\\
 The Math Foundation: Definitions, Derivations, Data and Simulations}
 \author{Bijun Wu \and Kanchan Patkar}
-\date{\today}
+\date{November 11, 2026}
 
 \begin{document}
 \maketitle
 
-\noindent\textbf{GitHub:} \url{https://github.com/WUB8/ds5020-anomaly-detection}\\
-\textbf{Project Leader (Iteration 2):} \todo{name}
+\begin{center}
+GitHub: \url{https://github.com/WUB8/ds5020-anomaly-detection}\\[2pt]
+Project Leader (Iteration 2): Bijun Wu
+\end{center}
 
-% ===========================================================================
-\section{Task Table}
-% ===========================================================================
-\begin{table}[H]
-\centering
-\begin{tabular}{@{}llllc@{}}
+%=====================================================================
+\section{Task table}
+%=====================================================================
+\begin{center}
+\begin{tabular}{@{}lllll@{}}
 \toprule
 ID & Task & Owner & Checker & Status \\
 \midrule
-T1 & Notation and definitions                 & Bijun   & Kanchan & Done \\
-T2 & Assumptions                              & Kanchan & Bijun   & Done \\
-Q1 & MLE of $\bmu$ and $\Sigma$               & Bijun   & Kanchan & \todo{} \\
-Q2 & Mahalanobis distance is non-negative     & Bijun   & Kanchan & \todo{} \\
-Q3 & $d^2 \sim \chi^2_d$                      & Kanchan & Bijun   & \todo{} \\
-Q4 & $\Sigma^{-1/2}$ from eigendecomposition  & Kanchan & Bijun   & \todo{} \\
-Q5 & False-alarm rate equals $\alpha$         & Kanchan & Bijun   & \todo{} \\
-T3 & Algorithm as math                        & \todo{} & \todo{} & \todo{} \\
-T4 & Real data description                    & Bijun   & Kanchan & Done    \\
-T5 & Simulation check                         & Bijun   & Kanchan & Done    \\
+T1 & Notation and definitions & Bijun & Kanchan & Done \\
+T2 & Assumptions & Kanchan & Bijun & Done \\
+Q1 & MLE of $\mu$ and $\Sigma$ & Bijun & Kanchan & Done \\
+Q2 & Mahalanobis distance is non-negative & Bijun & Kanchan & Done \\
+Q3 & $d^2\sim\chi^2_d$ & Kanchan & Bijun & Done \\
+Q4 & $\Sigma^{-1/2}$ from eigendecomposition & Kanchan & Bijun & Done \\
+Q5 & False-alarm rate equals $\alpha$ & Kanchan & Bijun & Done \\
+P6 & Average training $d^2$ equals $d$ (Prop.~\ref{prop:meand}) & Kanchan & Bijun & Done \\
+T3 & Algorithm as math & Bijun & Kanchan & Done \\
+T4 & Real data description & Bijun & Kanchan & Done \\
+T5 & Simulation check & Bijun & Kanchan & Done \\
+T6 & Hand-worked example & Kanchan & Bijun & Done \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{center}
 
-% ===========================================================================
-\section{Notation and Definitions}
-% ===========================================================================
+%=====================================================================
+\section{Notation and definitions}
+%=====================================================================
 \subsection{Notation}
-\begin{table}[H]
-\centering
-\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
 \toprule
 Symbol & Dimension & Meaning \\
 \midrule
-$s$ & index & subject (typist), $s = 1,\dots,51$ \\
+$s$ & index & subject (typist), $s=1,\dots,51$ \\
 $u$ & index & the genuine user whose typing rhythm is modelled \\
-$k$ & index & key of the password \texttt{.tie5Roanl} + Return, $k = 1,\dots,11$ \\
+$k$ & index & key of the password \texttt{.tie5Roanl} + Return, $k=1,\dots,11$ \\
 $H_k$ & scalar (s) & hold time of key $k$ (key-down to key-up) \\
 $DD_{k,k+1}$ & scalar (s) & keydown--keydown latency between consecutive keys \\
-$UD_{k,k+1}$ & scalar (s) & keyup--keydown latency; $UD_{k,k+1} = DD_{k,k+1} - H_k$ \\
-$\x^{\text{raw}}_i$ & $\R^{21}$ & raw timings of typing $i$: $(H_1,\dots,H_{11},DD_{1,2},\dots,DD_{10,11})$ \\
-$\x_i$ & $\R^{d}$ & feature vector of typing $i$, $\x_i = \log\x^{\text{raw}}_i$ (entrywise) \\
-$n$ & scalar & number of training typings of user $u$ ($n = 200$) \\
-$d$ & scalar & number of features ($d = 21$: 11 hold times + 10 DD latencies) \\
-$X$ & $\R^{n\times d}$ & training data matrix of user $u$; row $i$ is $\x_i^\top$ \\
-$m_{\text{gen}},\ m_{\text{imp}}$ & scalars & number of genuine ($200$) and impostor ($250$) test typings \\
-$\one$ & $\R^{n}$ & vector of ones \\
-$\bmu$ & $\R^{d}$ & true mean vector \\
+$UD_{k,k+1}$ & scalar (s) & keyup--keydown latency; $UD_{k,k+1}=DD_{k,k+1}-H_k$ \\
+$x_i^{\text{raw}}$ & $\R^{21}$ & raw timings of typing $i$: $(H_1,\dots,H_{11},DD_{1,2},\dots,DD_{10,11})$ \\
+$x_i$ & $\R^{d}$ & feature vector of typing $i$, $x_i=\log x_i^{\text{raw}}$ (entrywise) \\
+$n$ & scalar & number of training typings of user $u$ ($n=200$) \\
+$d$ & scalar & number of features ($d=21$: 11 hold times + 10 DD latencies) \\
+$X$ & $\R^{n\times d}$ & training data matrix of user $u$; row $i$ is $x_i\T$ \\
+$m_{\text{gen}},m_{\text{imp}}$ & scalars & number of genuine (200) and impostor (250) test typings \\
+$\mathbf 1$ & $\R^{n}$ & vector of ones of length $n$ \\
+$\mu$ & $\R^{d}$ & true mean vector \\
 $\Sigma$ & $\R^{d\times d}$ & true covariance matrix (symmetric positive definite) \\
-$\hmu,\ \hSigma$ & $\R^{d},\ \R^{d\times d}$ & maximum-likelihood estimates of $\bmu,\Sigma$ \\
-$X_c$ & $\R^{n\times d}$ & centred data matrix, $X_c = X - \one\hmu^\top$ \\
+$\hat\mu,\hat\Sigma$ & $\R^d,\ \R^{d\times d}$ & maximum-likelihood estimates of $\mu,\Sigma$ \\
+$X_c$ & $\R^{n\times d}$ & centred data matrix, $X_c=X-\mathbf 1\hat\mu\T$ \\
 $Q$ & $\R^{d\times d}$ & orthogonal matrix of eigenvectors of $\Sigma$ \\
 $\Lambda$ & $\R^{d\times d}$ & diagonal matrix of eigenvalues $\lambda_1,\dots,\lambda_d$ of $\Sigma$ \\
-$\Sigma^{-1/2}$ & $\R^{d\times d}$ & inverse square root, $Q\Lambda^{-1/2}Q^\top$ \\
-$\z$ & $\R^{d}$ & whitened vector, $\z = \Sigma^{-1/2}(\x - \bmu)$ \\
-$d^2(\x)$ & scalar & squared Mahalanobis distance of $\x$ \\
-$\ell(\bmu,\Sigma)$ & scalar & log-likelihood \\
+$\Sigma^{-1/2}$ & $\R^{d\times d}$ & inverse square root, $Q\Lambda^{-1/2}Q\T$ \\
+$K$ & $\R^{d\times d}$ & precision matrix, $K=\Sigma^{-1}$ \\
+$z$ & $\R^{d}$ & whitened vector, $z=\Sigma^{-1/2}(x-\mu)$ \\
+$d^2(x)$ & scalar & squared Mahalanobis distance of $x$ \\
+$\ell(\mu,\Sigma)$ & scalar & log-likelihood \\
 $\alpha$ & scalar & target false-alarm rate \\
-$\tau$ & scalar & threshold, $\tau = \chi^2_{d,1-\alpha}$ \\
+$\tau$ & scalar & threshold, $\tau=\chi^2_{d,1-\alpha}$ \\
+$S$ & $\R^{d\times d}$ & sample covariance $\frac1n\sum_i(x_i-\hat\mu)(x_i-\hat\mu)\T$ in the Q1 proof (equals $\hat\Sigma$) \\
+$v_i,\ y$ & $\R^{d}$ & deviation from the mean, $v_i=x_i-\hat\mu$, $y=x-\mu$ \\
+$W$ & $\R^{d\times d}$ & whitening matrix used in the algorithm, $W=\hat\Sigma^{-1/2}$ \\
+$m$ & scalar & number of new typings scored \\
+$X_{\text{new}},\ Z$ & $\R^{m\times d}$ & new typings (one per row) and their whitened versions \\
+$\mathbf 1_m$ & $\R^{m}$ & vector of ones of length $m$ (batch scoring) \\
+$I_d$ & $\R^{d\times d}$ & identity matrix ($I$ when the size is clear) \\
+$I_k$ & $\{0,1\}$ & indicator that reading $k$ is flagged, $\mathbf 1\{d^2(x_k)>\tau\}$ \\
+$\varepsilon$ & scalar & small ridge added to $\hat\Sigma$ if it is ill-conditioned \\
+$T^2$ & scalar & $d^2$ computed with the unbiased covariance $\frac{n}{n-1}\hat\Sigma$ \\
+$F_{d_1,d_2}$ & distribution & $F$ distribution with $d_1,d_2$ degrees of freedom (Def.~\ref{def:fdist}) \\
+$B$ & $\R^{d\times d}$ & random matrix used to build $\Sigma=BB\T+dI$ in the simulation \\
+$\|A\|_F$ & scalar & Frobenius norm, $\sqrt{\sum_{j,k}A_{jk}^2}$ \\
 \bottomrule
-\end{tabularx}
-\end{table}
+\end{tabular}
+\end{center}
+$d$ is the number of features, while $d^2(x)$ always denotes the squared distance of the point $x$, not $d$ squared.
 
-\subsection{Connecting the Data to the Math}
-\paragraph{Dataset.} CMU Keystroke Dynamics Benchmark (Killourhy and Maxion, 2009). Each of 51 subjects typed the password \texttt{.tie5Roanl} followed by Return 400 times: 8 sessions of 50 repetitions, with sessions on different days. The file has $51\times400 = 20{,}400$ rows. Each row contains \texttt{subject}, \texttt{sessionIndex}, \texttt{rep} and 31 timing features in seconds: 11 hold times $H_k$, 10 keydown--keydown latencies $DD_{k,k+1}$ and 10 keyup--keydown latencies $UD_{k,k+1}$.
+\subsection{Connecting the data to the math}
+We use the CMU Keystroke Dynamics Benchmark (Killourhy and Maxion, 2009). Each of the 51 subjects typed the password \texttt{.tie5Roanl} followed by Return 400 times: 8 sessions of 50 repetitions, with sessions on different days. The file has $51\times400=20{,}400$ rows. Each row contains \texttt{subject}, \texttt{sessionIndex}, \texttt{rep} and 31 timing features in seconds: 11 hold times $H_k$, 10 keydown--keydown latencies $DD_{k,k+1}$ and 10 keyup--keydown latencies $UD_{k,k+1}$.
 
-\paragraph{One row, one column, one entry.}
-\begin{itemize}[leftmargin=*]
-\item \textbf{One row} $\x_i^\top$ of $X$ is one complete typing of the password by user $u$.
-\item \textbf{One column} $j$ of $X$ is one timing feature across all typings, e.g.\ the hold time of the key \texttt{t}, or the keydown--keydown latency from \texttt{t} to \texttt{i}.
-\item \textbf{One entry} $X_{ij}$ is the log of that timing, in log-seconds, for typing $i$.
+\textbf{One row, one column, one entry.}
+\begin{itemize}
+  \item One row $x_i\T$ of $X$ is one complete typing of the password by user $u$.
+  \item One column $j$ of $X$ is one timing feature across all typings, e.g.\ the hold time of the key \texttt{t}, or the keydown--keydown latency from \texttt{t} to \texttt{i}.
+  \item One entry $X_{ij}$ is the log of that timing, in log-seconds, for typing $i$.
 \end{itemize}
 
-\paragraph{Feature choice.} We use $d = 21$ features: the 11 hold times and the 10 $DD$ latencies. The 10 $UD$ latencies are dropped because they are an exact linear combination of the others, $UD_{k,k+1} = DD_{k,k+1} - H_k$. Keeping all 31 would make $\Sigma$ singular (Assumption~\ref{as:pd}). Using $DD$ rather than $UD$ also keeps every feature positive, so the log transform is defined ($UD$ can be negative when two keys overlap).
+We use $d=21$ features: the 11 hold times and the 10 DD latencies. We drop the 10 UD latencies because they are exact linear combinations of the other timings: $UD_{k,k+1}=DD_{k,k+1}-H_k$. Keeping all 31 would make the covariance of the raw features singular (Assumption~\ref{as:pd}). Using DD rather than UD also keeps every feature positive, so the log transform is defined (UD can be negative when two keys overlap).
 
-\paragraph{Normal vs.\ anomalous.} For each genuine user $u$ we follow the benchmark's protocol: the first $n = 200$ typings (sessions 1--4) are the training data used to fit $\hmu,\hSigma$. The test set is the remaining $m_{\text{gen}} = 200$ typings of $u$ (normal), plus the first 5 typings of each of the other 50 subjects, $m_{\text{imp}} = 250$ (anomalies, i.e.\ impostors). We repeat this with every subject as the genuine user.
+For each genuine user $u$, we follow the benchmark's protocol: the first $n=200$ typings (sessions 1--4) are the training data used to fit $\hat\mu,\hat\Sigma$. The test set contains the remaining $m_{\text{gen}}=200$ typings of $u$ (normal), plus the first 5 typings of each of the other 50 subjects, $m_{\text{imp}}=250$ (anomalies, i.e.\ impostors). We repeat this with every subject as the genuine user.
 
 \subsection{Definitions}
-\begin{definition}[Symmetric positive (semi-)definite matrix]
-$A\in\R^{d\times d}$ is symmetric if $A^\top = A$. It is positive semi-definite if $\mathbf{v}^\top A\mathbf{v}\ge 0$ for all $\mathbf{v}\in\R^d$, and positive definite if $\mathbf{v}^\top A\mathbf{v}>0$ for all $\mathbf{v}\neq\mathbf{0}$.
+
+\begin{definition}[Symmetric positive (semi-)definite matrix]\label{def:pd}
+$A\in\R^{d\times d}$ is symmetric if $A\T=A$. It is positive semi-definite if $v\T Av\ge0$ for all $v\in\R^d$, and positive definite if $v\T Av>0$ for all $v\neq0$.
 \end{definition}
 
-\begin{definition}[Mean vector and covariance matrix]
-For a random vector $\x\in\R^d$, the mean vector is $\bmu = \E[\x]\in\R^d$ and the covariance matrix is
+\begin{definition}[Mean vector and covariance matrix]\label{def:cov}
+For a random vector $x\in\R^d$, the mean vector is $\mu=\E[x]\in\R^d$ and the covariance matrix is
 \[
-\Sigma = \E\big[(\x-\bmu)(\x-\bmu)^\top\big]\in\R^{d\times d},
-\qquad
-\Sigma_{jk} = \Cov(x_j,x_k) = \E\big[(x_j-\mu_j)(x_k-\mu_k)\big].
+\Sigma=\E\big[(x-\mu)(x-\mu)\T\big]\in\R^{d\times d},\qquad \Sigma_{jk}=\Cov(x_j,x_k)=\E\big[(x_j-\mu_j)(x_k-\mu_k)\big].
 \]
-The diagonal entries $\Sigma_{jj} = \Var(x_j)$ are the variances of the individual features.
+The diagonal entries $\Sigma_{jj}=\Var(x_j)$ are the variances of the individual features.
 \end{definition}
 
-\begin{definition}[Multivariate normal distribution]
-A random vector $\x\in\R^d$ has the multivariate normal distribution $\x\sim\Normal(\bmu,\Sigma)$, with $\Sigma$ symmetric positive definite, if its density is
+\begin{definition}[Multivariate normal distribution]\label{def:mvn}
+A random vector $x\in\R^d$ has the multivariate normal distribution $x\sim\mathcal N(\mu,\Sigma)$, with $\Sigma$ symmetric positive definite, if its density is
 \[
-f(\x\mid\bmu,\Sigma) = \frac{1}{(2\pi)^{d/2}\,|\Sigma|^{1/2}}
-\exp\!\Big(-\tfrac12(\x-\bmu)^\top\Sigma^{-1}(\x-\bmu)\Big),
-\qquad \x\in\R^d,
+f(x\mid\mu,\Sigma)=\frac{1}{(2\pi)^{d/2}|\Sigma|^{1/2}}\exp\!\Big(-\frac12(x-\mu)\T\Sigma^{-1}(x-\mu)\Big),\qquad x\in\R^d,
 \]
 where $|\Sigma|$ is the determinant of $\Sigma$.
 \end{definition}
 
-\begin{definition}[Likelihood and maximum-likelihood estimator]
-Given observations $\x_1,\dots,\x_n$ with joint density $f(\x_1,\dots,\x_n\mid\theta)$, the likelihood is the function $L(\theta) = f(\x_1,\dots,\x_n\mid\theta)$ of the parameter $\theta$ with the data held fixed, and the log-likelihood is $\ell(\theta) = \log L(\theta)$. The maximum-likelihood estimator (MLE) is
+\begin{definition}[Likelihood and maximum-likelihood estimator]\label{def:mle}
+Given observations $x_1,\dots,x_n$ with joint density $f(x_1,\dots,x_n\mid\theta)$, the likelihood is the function $L(\theta)=f(x_1,\dots,x_n\mid\theta)$ of the parameter $\theta$ with the data held fixed, and the log-likelihood is $\ell(\theta)=\log L(\theta)$. The maximum-likelihood estimator (MLE) is
 \[
-\hat\theta = \arg\max_{\theta}\, L(\theta) = \arg\max_{\theta}\, \ell(\theta).
+\hat\theta=\arg\max_\theta L(\theta)=\arg\max_\theta \ell(\theta).
 \]
-Here $\theta = (\bmu,\Sigma)$.
+Here $\theta=(\mu,\Sigma)$.
 \end{definition}
 
-\begin{definition}[Eigenvalue, eigenvector, spectral decomposition]
-A scalar $\lambda$ is an eigenvalue of $A\in\R^{d\times d}$ with eigenvector $\mathbf{q}\neq\mathbf{0}$ if $A\mathbf{q} = \lambda\mathbf{q}$. By the spectral theorem, every real symmetric matrix $\Sigma$ can be written
+\begin{definition}[Eigenvalue, eigenvector, spectral decomposition]\label{def:eig}
+A scalar $\lambda$ is an eigenvalue of $A\in\R^{d\times d}$ with eigenvector $q\neq0$ if $Aq=\lambda q$. By the spectral theorem, every real symmetric matrix $\Sigma$ can be written
 \[
-\Sigma = Q\Lambda Q^\top,\qquad Q^\top Q = QQ^\top = I,\qquad \Lambda = \operatorname{diag}(\lambda_1,\dots,\lambda_d),
+\Sigma=Q\Lambda Q\T,\qquad Q\T Q=QQ\T=I,\qquad \Lambda=\diag(\lambda_1,\dots,\lambda_d),
 \]
-where the columns $\mathbf{q}_1,\dots,\mathbf{q}_d$ of $Q$ are orthonormal eigenvectors and $\lambda_1,\dots,\lambda_d$ are the corresponding real eigenvalues.
+where the columns $q_1,\dots,q_d$ of $Q$ are orthonormal eigenvectors and $\lambda_1,\dots,\lambda_d$ are the corresponding real eigenvalues. A symmetric matrix is positive definite if and only if all its eigenvalues are positive.
 \end{definition}
 
-\begin{definition}[Mahalanobis distance]
-For $\x\in\R^d$, a mean $\bmu\in\R^d$ and a symmetric positive definite $\Sigma$, the Mahalanobis distance of $\x$ from $\bmu$ is
+\begin{definition}[Mahalanobis distance]\label{def:mahal}
+For $x\in\R^d$, a mean $\mu\in\R^d$ and a symmetric positive definite $\Sigma$, the Mahalanobis distance of $x$ from $\mu$ is
 \[
-d(\x) = \sqrt{(\x-\bmu)^\top\Sigma^{-1}(\x-\bmu)},
+d(x)=\sqrt{(x-\mu)\T\Sigma^{-1}(x-\mu)},
 \]
-and $d^2(\x) = (\x-\bmu)^\top\Sigma^{-1}(\x-\bmu)$ is the squared Mahalanobis distance. When $\Sigma = I$ it reduces to the Euclidean distance $\|\x-\bmu\|$.
+and $d^2(x)=(x-\mu)\T\Sigma^{-1}(x-\mu)$ is the squared Mahalanobis distance. When $\Sigma=I$ it reduces to the Euclidean distance $\|x-\mu\|$.
 \end{definition}
 
-\begin{definition}[Chi-squared distribution]
-If $Z_1,\dots,Z_d$ are independent $\Normal(0,1)$ random variables, then
+\begin{definition}[Chi-squared distribution]\label{def:chi2}
+If $Z_1,\dots,Z_d$ are independent $\mathcal N(0,1)$ random variables, then
 \[
-\sum_{j=1}^d Z_j^2 \sim \chi^2_d,
+\sum_{j=1}^d Z_j^2\sim\chi^2_d,
 \]
 the chi-squared distribution with $d$ degrees of freedom. It has mean $d$ and variance $2d$.
 \end{definition}
 
-\begin{definition}[Quantile and false-alarm rate]
-For a continuous random variable $Y$ with cumulative distribution function $F$, the $(1-\alpha)$ quantile is the value $q_{1-\alpha}$ with $F(q_{1-\alpha}) = \Pr(Y\le q_{1-\alpha}) = 1-\alpha$. We write $\chi^2_{d,1-\alpha}$ for the $(1-\alpha)$ quantile of $\chi^2_d$. For a detector that flags $\x$ when $d^2(\x) > \tau$, the false-alarm rate is the probability that a normal reading is flagged,
+\begin{definition}[Quantile and false-alarm rate]\label{def:quant}
+For a continuous random variable $Y$ with cumulative distribution function $F$, the $(1-\alpha)$ quantile is the value $q_{1-\alpha}$ with $F(q_{1-\alpha})=\Pr(Y\le q_{1-\alpha})=1-\alpha$. We write $\chi^2_{d,1-\alpha}$ for the $(1-\alpha)$ quantile of $\chi^2_d$, and $F_{\chi^2_d}$ for the CDF of $\chi^2_d$. For a detector that flags $x$ when $d^2(x)>\tau$, the false-alarm rate is the probability that a normal reading is flagged,
 \[
-\Pr\big(d^2(\x) > \tau \;\big|\; \x\sim\Normal(\bmu,\Sigma)\big).
+\Pr\big(d^2(x)>\tau \,\big|\, x\sim\mathcal N(\mu,\Sigma)\big).
 \]
 \end{definition}
 
-% ===========================================================================
+\begin{definition}[$F$ distribution]\label{def:fdist}
+If $U\sim\chi^2_{d_1}$ and $V\sim\chi^2_{d_2}$ are independent, then
+\[
+\frac{U/d_1}{V/d_2}\sim F_{d_1,d_2},
+\]
+the $F$ distribution with $d_1$ and $d_2$ degrees of freedom. Assumption~\ref{as:large} uses it for the small-sample threshold.
+\end{definition}
+
+%=====================================================================
 \section{Assumptions}
-% ===========================================================================
-For each assumption: what goes wrong in the math if it fails, and how we will check it on the real data in Iteration 3.
+%=====================================================================
+The following assumptions support the derivations. For each one, we explain the consequences of a violation and the checks planned for Iteration 3.
 
 \begin{assumption}[Independence and identical distribution]\label{as:iid}
-The training typings $\x_1,\dots,\x_n$ of user $u$ are independent and all drawn from the same $\Normal(\bmu,\Sigma)$.\\
-\emph{If it fails:} The likelihood in Q1 no longer factors into a product of densities, so $\hmu,\hSigma$ are no longer the exact MLEs. For keystrokes the main risk is \emph{practice and drift}: users get faster within a session and across the 8 sessions (different days), so the mean $\bmu$ changes over time. Consecutive repetitions within a session may also be correlated (fatigue, rhythm). A model trained on sessions 1--4 then sits away from the user's later typing in sessions 5--8, which inflates $d^2$ for genuine test typings and raises the false-alarm rate above $\alpha$.\\
-\emph{Check:} Plot each feature (and the total typing time) against the repetition index $1,\dots,400$, coloured by session, and look for trends. Plot the autocorrelation of each feature within a session. Compare $\hmu$ fitted on sessions 1--2 with sessions 3--4.
+The training typings $x_1,\dots,x_n$ of user $u$ are independent and all drawn from the same $\mathcal N(\mu,\Sigma)$.
 \end{assumption}
+\noindent\textit{If it fails:} If the typings are dependent, the likelihood in Q1 no longer factors into a product of densities. If they are independent but not identically distributed (for example, $\mu$ drifts over time), the likelihood still factors, but not into the product of one common $\mathcal N(\mu,\Sigma)$ density used in Q1. In either case $\hat\mu,\hat\Sigma$ are no longer the exact MLEs of a single model. For keystroke data, practice and drift are the main concerns: users get faster within a session and across the 8 sessions (different days), so the mean $\mu$ changes over time. Consecutive repetitions within a session may also be correlated (fatigue, rhythm). The model fitted to sessions 1--4 may then poorly describe the user's typing in sessions 5--8. This inflates $d^2$ for genuine test typings and raises the false-alarm rate above $\alpha$.
+
+\noindent\textit{Check:} Plot each feature (and the total typing time) against the repetition index $1,\dots,400$, coloured by session, and look for trends. Plot the autocorrelation of each feature within a session. Compare $\hat\mu$ fitted on sessions 1--2 with sessions 3--4.
 
 \begin{assumption}[Normality]\label{as:normal}
-For a fixed user, the log-timings follow $\Normal(\bmu,\Sigma)$.\\
-\emph{If it fails:} Q3 ($d^2\sim\chi^2_d$) no longer holds, so the threshold $\tau = \chi^2_{d,1-\alpha}$ from Q5 does not give false-alarm rate $\alpha$. Raw timings are positive and right-skewed, with occasional very long pauses (heavy tails); our $t_3$ simulation shows heavy tails can make the false-alarm rate five times larger than $\alpha$. This is why we model $\log$ timings rather than raw seconds.\\
-\emph{Check:} Histograms and normal Q-Q plots of each feature before and after the log transform. A Q-Q plot of the genuine users' $d^2$ against $\chi^2_{21}$. Compare the observed false-alarm rate on genuine test typings with $\alpha$.
+For a fixed user, the log-timings follow $\mathcal N(\mu,\Sigma)$.
 \end{assumption}
+\noindent\textit{If it fails:} Q3 ($d^2\sim\chi^2_d$) no longer holds, so the threshold $\tau=\chi^2_{d,1-\alpha}$ from Q5 does not give false-alarm rate $\alpha$. Raw timings are positive and right-skewed, with occasional very long pauses (heavy tails); our $t_3$ simulation shows heavy tails can make the false-alarm rate five times larger than $\alpha$ at $\alpha=0.01$. We therefore model log timings.
+
+\noindent\textit{Check:} Plot histograms and normal Q-Q plots for each feature before and after the log transform. Compare the genuine users' $d^2$ with $\chi^2_{21}$ in a Q-Q plot, and compare the observed false-alarm rate on genuine test typings with $\alpha$.
 
 \begin{assumption}[Positive definite covariance]\label{as:pd}
-$\Sigma$ and $\hSigma$ are positive definite. This requires $n > d$ and that no feature is a linear combination of the others.\\
-\emph{If it fails:} $\Sigma^{-1}$ and $\Sigma^{-1/2}$ do not exist, so $d^2(\x)$ is undefined (Q2, Q4). The dataset contains an exact linear dependence, $UD_{k,k+1} = DD_{k,k+1} - H_k$, so using all 31 raw features gives a singular $\hSigma$ with 10 zero eigenvalues. Even with $d=21$, strongly correlated features give tiny eigenvalues, and dividing by $\sqrt{\lambda_j}$ amplifies noise along those directions.\\
-\emph{Check:} Confirm numerically that $UD = DD - H$ in the raw data. For each user, compute the eigenvalues of $\hSigma$ and the condition number $\lambda_{\max}/\lambda_{\min}$. If it is very large, add a small ridge $\hSigma + \varepsilon I$ and report its effect.
+$\Sigma$ and $\hat\Sigma$ are positive definite. For $\Sigma$ this means no feature is an exact linear combination of the others. The estimate $\hat\Sigma=\frac1nX_c\T X_c$ is positive definite exactly when the centred data matrix $X_c$ has full column rank $d$, since $v\T\hat\Sigma v=\frac1n\|X_cv\|^2$; this requires $n>d$, but $n>d$ alone is not sufficient.
 \end{assumption}
+\noindent\textit{If it fails:} $\Sigma^{-1}$ and $\Sigma^{-1/2}$ do not exist, so $d^2(x)$ is undefined (Q2, Q4). The dataset contains an exact linear dependence, $UD_{k,k+1}=DD_{k,k+1}-H_k$, so using all 31 raw features gives a singular $\hat\Sigma$ with 10 zero eigenvalues. Even with $d=21$, strongly correlated features give tiny eigenvalues, and dividing by $\sqrt{\lambda_j}$ amplifies noise along those directions.
+
+\noindent\textit{Check:} Confirm numerically that $UD=DD-H$ in the raw data. For each user, compute the eigenvalues of $\hat\Sigma$ and the condition number $\lambda_{\max}/\lambda_{\min}$. If the condition number is very large, add a small ridge $\hat\Sigma+\varepsilon I$ and report its effect.
 
 \begin{assumption}[Clean training data]\label{as:clean}
-The 200 training typings are all genuine, typical typings of user $u$.\\
-\emph{If it fails:} Unusual training typings (distractions, long hesitations) pull $\hmu$ towards them and inflate $\hSigma$. A larger $\hSigma$ means a smaller $\hSigma^{-1}$, which shrinks every $d^2$, so impostors look less unusual and are missed (masking).\\
-\emph{Check:} Fit on the training set, list the training typings with the largest $d^2$, refit without them, and compare $\hmu,\hSigma$ and the detection results. The benchmark only contains correctly typed passwords, so typos are not a concern.
+The 200 training typings are all genuine, typical typings of user $u$.
 \end{assumption}
+\noindent\textit{If it fails:} Unusual training typings caused by distractions or long hesitations pull $\hat\mu$ towards them and inflate $\hat\Sigma$. If contamination made $\hat\Sigma$ larger in the positive semi-definite order with $\hat\mu$ fixed, then $\hat\Sigma^{-1}$ would be smaller and every $d^2$ would shrink. In general contamination changes both $\hat\mu$ and $\hat\Sigma$, so it need not shrink every distance, but it can reduce the anomaly scores of impostors so that the detector misses them (masking).
+
+\noindent\textit{Check:} Fit on the training set, list the training typings with the largest $d^2$, refit without them, and compare $\hat\mu,\hat\Sigma$ and the detection results. The benchmark only contains correctly typed passwords, so typos are not a concern.
 
 \begin{assumption}[Large sample]\label{as:large}
-$n \gg d$, so that $\hmu\approx\bmu$ and $\hSigma\approx\Sigma$.\\
-\emph{If it fails:} Q3 is exact only for the true $\bmu,\Sigma$; with plug-in estimates the distribution of $d^2$ is only approximately $\chi^2_d$, and the false-alarm rate drifts away from $\alpha$. Here $n = 200$ and $d = 21$, so $\hSigma$ has $d(d+1)/2 = 231$ free entries estimated from 200 vectors, with $n/d \approx 9.5$. This is borderline, and it is another reason not to use all 31 features.\\
-\emph{Check:} A preliminary simulation with $n = 200$, $d = 21$ (normal data, 200 repetitions, each scoring 2000 new points) gives false-alarm rates of $0.21$, $0.13$ and $0.044$ for $\alpha = 0.10, 0.05, 0.01$, about two to four times too high. So with this sample size the plug-in $\chi^2_d$ threshold is too small. In Iteration 3 we will compare it with the exact small-sample result for a new observation, $\frac{n(n-d)}{d(n+1)(n-1)}\,T^2 \sim F_{d,\,n-d}$, where $T^2$ uses the unbiased covariance $\frac{n}{n-1}\hSigma$. On the real data, measure the false-alarm rate on the held-out genuine typings (sessions 5--8), not on the training typings: on the training data the mean of $d^2$ is exactly $d$ by construction.
+$n\gg d$, so that $\hat\mu\approx\mu$ and $\hat\Sigma\approx\Sigma$.
 \end{assumption}
+\noindent\textit{If it fails:} Q3 is exact only for the true $\mu,\Sigma$; with plug-in estimates the distribution of $d^2$ is only approximately $\chi^2_d$, and the false-alarm rate drifts away from $\alpha$. Here $n=200$ and $d=21$, so $\hat\Sigma$ has $d(d+1)/2=231$ free entries estimated from 200 vectors, with $n/d\approx9.5$. This sample size is borderline and gives another reason to exclude the redundant features.
 
-% ===========================================================================
+\noindent\textit{Check:} A simulation with $n=200$, $d=21$ (\texttt{src/simulate.py}, Part D: normal data, 200 repetitions, each fitting on 200 points and scoring 2000 new points) gives false-alarm rates of 0.21, 0.13 and 0.043 for $\alpha=0.10,0.05,0.01$, about two to four times too high. At this sample size, the plug-in $\chi^2_d$ threshold is too small. The exact small-sample result for a new observation,
+$\frac{n(n-d)}{d(n+1)(n-1)}T^2\sim F_{d,\,n-d}$, where $T^2$ uses the unbiased covariance $\frac{n}{n-1}\hat\Sigma$, restores the rate: the same simulation gives 0.100, 0.050 and 0.010 with the $F$ threshold. In Iteration 3 we will compare both thresholds on the real data. We will measure the real-data false-alarm rate on held-out genuine typings (sessions 5--8), because on the training data the mean of $d^2$ is exactly $d$ by construction (Proposition~\ref{prop:meand}).
+
+%=====================================================================
 \section{Iteration 2 -- Math Questions}
-% ===========================================================================
-\textit{Each step names the definition, theorem or rule used, written as} \rulenote{rule}.
+%=====================================================================
+The rule used at each step appears in square brackets.
 
-% ---------------------------------------------------------------------------
+%---------------------------------------------------------------------
 \subsection*{Q1. Log-likelihood and MLEs}
-\begin{theorem}[MLE of a multivariate normal]
-Let $\x_1,\dots,\x_n$ be i.i.d.\ $\Normal(\bmu,\Sigma)$. The log-likelihood is
+%---------------------------------------------------------------------
+\begin{theorem}[MLE of a multivariate normal]\label{thm:mle}
+Let $x_1,\dots,x_n$ be i.i.d.\ $\mathcal N(\mu,\Sigma)$. The log-likelihood is
 \[
-\ell(\bmu,\Sigma) = -\frac{nd}{2}\log(2\pi) - \frac{n}{2}\log|\Sigma| - \frac12\sum_{i=1}^n(\x_i-\bmu)^\top\Sigma^{-1}(\x_i-\bmu),
+\ell(\mu,\Sigma)=-\frac{nd}{2}\log(2\pi)-\frac n2\log|\Sigma|-\frac12\sum_{i=1}^n(x_i-\mu)\T\Sigma^{-1}(x_i-\mu),
 \]
 and it is maximised by
 \[
-\hmu = \frac1n\sum_{i=1}^n \x_i = \frac1n X^\top\one,
-\qquad
-\hSigma = \frac1n\sum_{i=1}^n(\x_i-\hmu)(\x_i-\hmu)^\top = \frac1n X_c^\top X_c .
+\hat\mu=\frac1n\sum_{i=1}^n x_i=\frac1n X\T\mathbf 1,\qquad
+\hat\Sigma=\frac1n\sum_{i=1}^n(x_i-\hat\mu)(x_i-\hat\mu)\T=\frac1n X_c\T X_c .
 \]
 \end{theorem}
+
 \begin{proof}
-\textbf{Step 1 (likelihood).} Since the observations are independent, the joint density is the product of the marginal densities:
+\textbf{Step 1 (likelihood).} Independence lets us write the joint density as a product of marginal densities:
 \begin{align*}
-L(\bmu,\Sigma)
-&= \prod_{i=1}^n f(\x_i\mid\bmu,\Sigma) && \rulenote{independence}\\
-&= \prod_{i=1}^n (2\pi)^{-d/2}\,|\Sigma|^{-1/2}
-   \exp\!\Big(-\tfrac12(\x_i-\bmu)^\top\Sigma^{-1}(\x_i-\bmu)\Big). && \rulenote{Def.\ of multivariate normal}
+L(\mu,\Sigma) &= \prod_{i=1}^n f(x_i\mid\mu,\Sigma) && \rul{independence}\\
+&= \prod_{i=1}^n (2\pi)^{-d/2}|\Sigma|^{-1/2}\exp\!\Big(-\tfrac12(x_i-\mu)\T\Sigma^{-1}(x_i-\mu)\Big). && \rul{Def.~\ref{def:mvn}}
 \end{align*}
 
 \textbf{Step 2 (log-likelihood).} Taking logarithms,
 \begin{align*}
-\ell(\bmu,\Sigma) = \log L(\bmu,\Sigma)
-&= \sum_{i=1}^n \log f(\x_i\mid\bmu,\Sigma) && \rulenote{$\log\prod a_i = \sum\log a_i$}\\
-&= -\frac{nd}{2}\log(2\pi) - \frac n2\log|\Sigma|
-   - \frac12\sum_{i=1}^n(\x_i-\bmu)^\top\Sigma^{-1}(\x_i-\bmu). && \rulenote{$\log e^u = u$,\ $\log a^p = p\log a$}
+\ell(\mu,\Sigma) &= \log L(\mu,\Sigma)=\sum_{i=1}^n\log f(x_i\mid\mu,\Sigma) && \rul{$\log\prod a_i=\sum\log a_i$}\\
+&= -\frac{nd}{2}\log(2\pi)-\frac n2\log|\Sigma|\\
+&\qquad -\frac12\sum_{i=1}^n(x_i-\mu)\T\Sigma^{-1}(x_i-\mu). && \rul{$\log e^u=u$, $\log a^p=p\log a$}
 \end{align*}
-Since $\log$ is strictly increasing, maximising $L$ is equivalent to maximising $\ell$.
+The logarithm is strictly increasing, so $L$ and $\ell$ have the same maximiser.
 
-\textbf{Step 3 (gradient with respect to $\bmu$).} For a symmetric matrix $A$, $\nabla_{\mathbf{v}}(\mathbf{v}^\top A\mathbf{v}) = 2A\mathbf{v}$. With $\mathbf{v}_i = \x_i-\bmu$ we have $\partial\mathbf{v}_i/\partial\bmu = -I$, and $\Sigma^{-1}$ is symmetric, so
+\textbf{Step 3 (gradient with respect to $\mu$).} For a symmetric matrix $A$, $\nabla_v(v\T Av)=2Av$. With $v_i=x_i-\mu$ we have $\partial v_i/\partial\mu=-I$, and $\Sigma^{-1}$ is symmetric, so
 \begin{align*}
-\nabla_{\bmu}\,\ell
-&= -\frac12\sum_{i=1}^n \big(-2\,\Sigma^{-1}(\x_i-\bmu)\big)
-&& \rulenote{gradient of a quadratic form, chain rule}\\
-&= \Sigma^{-1}\sum_{i=1}^n(\x_i-\bmu). && \rulenote{linearity}
+\nabla_\mu\ell &= -\frac12\sum_{i=1}^n\big(-2\Sigma^{-1}(x_i-\mu)\big) && \rul{gradient of a quadratic form, chain rule}\\
+&= \Sigma^{-1}\sum_{i=1}^n(x_i-\mu). && \rul{linearity}
 \end{align*}
-The first two terms of $\ell$ do not depend on $\bmu$, so their gradient is zero.
+The first two terms of $\ell$ do not depend on $\mu$, so their gradient is zero.
 
-\textbf{Step 4 (solve for $\hmu$).} Setting the gradient to zero and multiplying on the left by $\Sigma$ (which exists because $\Sigma$ is invertible),
+\textbf{Step 4 (solve for $\hat\mu$).} Set the gradient to zero and multiply on the left by $\Sigma$:
 \begin{align*}
-\Sigma^{-1}\sum_{i=1}^n(\x_i-\bmu) = \mathbf{0}
-\;\Longrightarrow\;
-\sum_{i=1}^n \x_i - n\bmu = \mathbf{0}
-\;\Longrightarrow\;
-\hmu = \frac1n\sum_{i=1}^n\x_i = \frac1n X^\top\one. && \rulenote{first-order condition}
+\Sigma^{-1}\sum_{i=1}^n(x_i-\mu)=0 \ \Longrightarrow\ \sum_{i=1}^n x_i-n\mu=0 \ \Longrightarrow\ \hat\mu=\frac1n\sum_{i=1}^n x_i=\frac1n X\T\mathbf 1. && \rul{first-order condition}
 \end{align*}
-This is a maximum: the Hessian is $\nabla^2_{\bmu}\,\ell = -n\,\Sigma^{-1}$, which is negative definite because $\Sigma^{-1}$ is positive definite (Q2). Hence $\ell$ is strictly concave in $\bmu$ and $\hmu$ is its unique maximiser for every fixed $\Sigma$.
+To check that this is a maximum, consider the Hessian $\nabla^2_\mu\ell=-n\Sigma^{-1}$, which is negative definite because $\Sigma^{-1}$ is positive definite (Proposition~\ref{prop:nonneg}). Hence $\ell$ is strictly concave in $\mu$ and $\hat\mu$ is its unique maximiser for every fixed $\Sigma$.
 
-\textbf{Step 5 (trace trick).} Substitute $\bmu=\hmu$ and write $\mathbf{v}_i = \x_i-\hmu$. A scalar equals its own trace, and $\tr(AB)=\tr(BA)$, so
+\textbf{Step 5 (trace trick).} Substitute $\mu=\hat\mu$ and write $v_i=x_i-\hat\mu$. A scalar equals its own trace, and $\tr(AB)=\tr(BA)$, so
 \begin{align*}
-\sum_{i=1}^n \mathbf{v}_i^\top\Sigma^{-1}\mathbf{v}_i
-&= \sum_{i=1}^n \tr\big(\mathbf{v}_i^\top\Sigma^{-1}\mathbf{v}_i\big) && \rulenote{scalar $=$ its trace}\\
-&= \sum_{i=1}^n \tr\big(\Sigma^{-1}\mathbf{v}_i\mathbf{v}_i^\top\big) && \rulenote{cyclic property of trace}\\
-&= \tr\Big(\Sigma^{-1}\sum_{i=1}^n\mathbf{v}_i\mathbf{v}_i^\top\Big)
- = n\,\tr\big(\Sigma^{-1}S\big), && \rulenote{linearity of trace}
+\sum_{i=1}^n v_i\T\Sigma^{-1}v_i &= \sum_{i=1}^n\tr\big(v_i\T\Sigma^{-1}v_i\big) && \rul{scalar $=$ its trace}\\
+&= \sum_{i=1}^n\tr\big(\Sigma^{-1}v_iv_i\T\big) && \rul{cyclic property of trace}\\
+&= \tr\Big(\Sigma^{-1}\sum_{i=1}^n v_iv_i\T\Big)=n\,\tr\big(\Sigma^{-1}S\big), && \rul{linearity of trace}
 \end{align*}
-where $S = \frac1n\sum_{i=1}^n(\x_i-\hmu)(\x_i-\hmu)^\top$.
+where $S=\frac1n\sum_{i=1}^n(x_i-\hat\mu)(x_i-\hat\mu)\T$.
 
-\textbf{Step 6 (change of variable).} Let $K=\Sigma^{-1}$ (the precision matrix), which is symmetric positive definite. Since $|\Sigma| = |K^{-1}| = 1/|K|$, we have $\log|\Sigma| = -\log|K|$. Then
+\textbf{Step 6 (change of variable).} Let $K=\Sigma^{-1}$ (the precision matrix), which is symmetric positive definite. Since $|\Sigma|=|K^{-1}|=1/|K|$, we have $\log|\Sigma|=-\log|K|$. Then
 \begin{align*}
-\ell(\hmu,K) = -\frac{nd}{2}\log(2\pi) + \frac n2\Big(\log|K| - \tr(KS)\Big). && \rulenote{$|A^{-1}| = 1/|A|$, Step 5}
+\ell(\hat\mu,K)=-\frac{nd}{2}\log(2\pi)+\frac n2\Big(\log|K|-\tr(KS)\Big). && \rul{$|A^{-1}|=1/|A|$, Step 5}
 \end{align*}
 
-\textbf{Step 7 (derivative with respect to $K$).} For symmetric positive definite $K$, $\frac{\partial}{\partial K}\log|K| = K^{-1}$ and $\frac{\partial}{\partial K}\tr(KS) = S^\top = S$. Hence
+\textbf{Step 7 (derivative with respect to $K$).} For symmetric positive definite $K$, $\frac{\partial}{\partial K}\log|K|=K^{-1}$ and $\frac{\partial}{\partial K}\tr(KS)=S\T=S$. Hence
 \begin{align*}
-\frac{\partial\ell}{\partial K} &= \frac n2\big(K^{-1} - S\big) = 0
-\;\Longrightarrow\; K^{-1} = S && \rulenote{matrix derivatives, first-order condition}\\
-\hSigma &= S = \frac1n\sum_{i=1}^n(\x_i-\hmu)(\x_i-\hmu)^\top = \frac1n X_c^\top X_c. && \rulenote{$\Sigma = K^{-1}$}
+\frac{\partial\ell}{\partial K}=\frac n2\big(K^{-1}-S\big)=0 \ &\Longrightarrow\ K^{-1}=S && \rul{matrix derivatives, first-order condition}\\
+\hat\Sigma=S=\frac1n\sum_{i=1}^n(x_i-\hat\mu)(x_i-\hat\mu)\T&=\frac1n X_c\T X_c. && \rul{$\Sigma=K^{-1}$}
 \end{align*}
-The last equality holds because row $i$ of $X_c$ is $(\x_i-\hmu)^\top$, so $X_c^\top X_c = \sum_i(\x_i-\hmu)(\x_i-\hmu)^\top$ \rulenote{matrix product as a sum of outer products}.
+For the last equality, row $i$ of $X_c$ is $(x_i-\hat\mu)\T$, so $X_c\T X_c=\sum_i(x_i-\hat\mu)(x_i-\hat\mu)\T$ [matrix product as a sum of outer products].
 
-\textbf{Step 8 (maximum).} $\log|K|$ is concave on the set of positive definite matrices and $\tr(KS)$ is linear in $K$, so $\ell(\hmu,K)$ is concave in $K$ and the stationary point $K = S^{-1}$ is the global maximiser (this requires $S$ to be positive definite, i.e.\ Assumption~3). Combined with Step 4, $(\hmu,\hSigma)$ maximises $\ell$.
+\textbf{Step 8 (maximum).} $\log|K|$ is concave on the set of positive definite matrices and $\tr(KS)$ is linear in $K$, so $\ell(\hat\mu,K)$ is concave in $K$ and the stationary point $K=S^{-1}$ is the global maximiser (this requires $S$ to be positive definite, i.e.\ Assumption~\ref{as:pd}). Combined with Step 4, $(\hat\mu,\hat\Sigma)$ maximises $\ell$.
 \end{proof}
 
-\paragraph{Remarks.}
-(i) $\hSigma$ divides by $n$, not $n-1$, so it is biased: $\E[\hSigma] = \frac{n-1}{n}\Sigma$. The bias vanishes as $n\to\infty$. The simulation confirms the ratio $(n-1)/n$ between $\hSigma$ and \texttt{np.cov}.
-(ii) In the hand-worked example, $\hmu = (3,4)$ and $\hSigma = \begin{pmatrix}2&1\\1&2\end{pmatrix}$, computed directly from these formulas.
-\signoff{Bijun Wu}{Kanchan Patkar}
+\noindent\textbf{Remarks.} (i) $\hat\Sigma$ divides by $n$, not $n-1$, so it is biased: $\E[\hat\Sigma]=\frac{n-1}{n}\Sigma$. The bias vanishes as $n\to\infty$. The simulation confirms the ratio $(n-1)/n$ between $\hat\Sigma$ and \texttt{np.cov}. (ii) In the hand-worked example (Section~\ref{sec:hand}), $\hat\mu=(3,4)$ and $\hat\Sigma=\begin{pmatrix}2&1\\1&2\end{pmatrix}$, computed directly from these formulas.
+\owner{Bijun Wu}{Kanchan Patkar}
 
-% ---------------------------------------------------------------------------
+%---------------------------------------------------------------------
 \subsection*{Q2. Mahalanobis distance is non-negative}
-\begin{proposition}
-If $\Sigma$ is positive definite, then $\Sigma^{-1}$ is positive definite and
-$d^2(\x) = (\x-\bmu)^\top\Sigma^{-1}(\x-\bmu) \ge 0$, with equality if and only if $\x = \bmu$.
+%---------------------------------------------------------------------
+\begin{proposition}\label{prop:nonneg}
+If $\Sigma$ is positive definite, then $\Sigma^{-1}$ is positive definite and $d^2(x)=(x-\mu)\T\Sigma^{-1}(x-\mu)\ge0$, with equality if and only if $x=\mu$.
 \end{proposition}
-\begin{proof}
-\todo{}
-\end{proof}
-\signoff{Bijun Wu}{Kanchan Patkar}
 
-% ---------------------------------------------------------------------------
+\begin{proof}
+\textbf{Step 1 ($\Sigma^{-1}$ exists).} Let $v\in\R^d$ be any nonzero test vector, as in Def.~\ref{def:pd}. Here $v$ is distinct from the centred data vector $v=x-\hat\mu$ used elsewhere.
+\begin{align*}
+v\T\Sigma v>0 \ &\Longrightarrow\ \Sigma v\neq0 && \rul{Def.~\ref{def:pd}; if $\Sigma v=0$ then $v\T\Sigma v=0$}\\
+&\Longrightarrow\ N(\Sigma)=\{0\} && \rul{true for every $v\neq0$; definition of null space}\\
+&\Longrightarrow\ \Sigma\text{ is invertible.} && \rul{invertible matrix theorem}
+\end{align*}
+
+\textbf{Step 2 ($\Sigma^{-1}$ is symmetric).}
+\begin{align*}
+(\Sigma^{-1})\T=(\Sigma\T)^{-1}=\Sigma^{-1}. && \rul{$(A^{-1})\T=(A\T)^{-1}$; $\Sigma\T=\Sigma$}
+\end{align*}
+
+\textbf{Step 3 ($\Sigma^{-1}$ is positive definite).} Let $y\neq0$ and put $w=\Sigma^{-1}y$. Then $y=\Sigma w$, and $w\neq0$ (otherwise $y=\Sigma0=0$).
+\begin{align*}
+y\T\Sigma^{-1}y &= (\Sigma w)\T\Sigma^{-1}(\Sigma w) && \rul{substitute $y=\Sigma w$}\\
+&= w\T\Sigma\T\Sigma^{-1}\Sigma w && \rul{$(AB)\T=B\T A\T$}\\
+&= w\T\Sigma w && \rul{$\Sigma\T=\Sigma$, $\Sigma^{-1}\Sigma=I$}\\
+&> 0. && \rul{Def.~\ref{def:pd}, $w\neq0$}
+\end{align*}
+
+\textbf{Step 4 (conclusion).} Let $y=x-\mu$.
+\begin{align*}
+x=\mu \ &\Longrightarrow\ d^2(x)=0\T\Sigma^{-1}0=0, && \rul{direct computation}\\
+x\neq\mu \ &\Longrightarrow\ y\neq0\ \Longrightarrow\ d^2(x)=y\T\Sigma^{-1}y>0. && \rul{Step 3}
+\end{align*}
+Hence $d^2(x)\ge0$ for all $x$, with equality if and only if $x=\mu$, and $d(x)=\sqrt{d^2(x)}$ in Def.~\ref{def:mahal} is a real number.
+\end{proof}
+\owner{Bijun Wu}{Kanchan Patkar}
+
+%---------------------------------------------------------------------
 \subsection*{Q3. $d^2$ follows a chi-squared distribution}
-\begin{theorem}
-If $\x\sim\Normal(\bmu,\Sigma)$ with $\Sigma$ positive definite, then $d^2(\x)\sim\chi^2_d$.
+%---------------------------------------------------------------------
+\begin{theorem}\label{thm:chi2}
+If $x\sim\mathcal N(\mu,\Sigma)$ with $\Sigma$ positive definite, and $d^2(x)$ is computed with the true $\mu$ and $\Sigma$, then $d^2(x)\sim\chi^2_d$.
 \end{theorem}
-\begin{proof}
-\todo{Let $\z = \Sigma^{-1/2}(\x-\bmu)$. Show $\E[\z] = \mathbf{0}$ and $\Cov(\z) = I$ \rulenote{linearity; $\Cov(A\x) = A\Sigma A^\top$}; $\z$ is normal \rulenote{affine map of a normal is normal}; so $z_j$ are i.i.d.\ $\Normal(0,1)$ \rulenote{uncorrelated jointly normal $\Rightarrow$ independent}; and $d^2 = \z^\top\z = \sum z_j^2$ \rulenote{definition of $\chi^2_d$}.}
-\end{proof}
-\signoff{Kanchan Patkar}{Bijun Wu}
 
-% ---------------------------------------------------------------------------
+\begin{proof}
+Let $z=\Sigma^{-1/2}(x-\mu)=Ax+b$ with $A=\Sigma^{-1/2}$ and $b=-\Sigma^{-1/2}\mu$; $\Sigma^{-1/2}$ exists and is symmetric by Proposition~\ref{prop:invsqrt}.
+
+\textbf{Step 1 (mean).}
+\begin{align*}
+\E[z] &= \Sigma^{-1/2}\big(\E[x]-\mu\big) && \rul{linearity of expectation}\\
+&= \Sigma^{-1/2}(\mu-\mu)=0. && \rul{Def.~\ref{def:cov}, $\E[x]=\mu$}
+\end{align*}
+
+\textbf{Step 2 (covariance).}
+\begin{align*}
+\Cov(z) &= A\,\Cov(x)\,A\T && \rul{$\Cov(Ax+b)=A\Cov(x)A\T$}\\
+&= \Sigma^{-1/2}\,\Sigma\,(\Sigma^{-1/2})\T && \rul{Def.~\ref{def:cov}, $\Cov(x)=\Sigma$}\\
+&= \Sigma^{-1/2}\,\Sigma\,\Sigma^{-1/2} && \rul{Prop.~\ref{prop:invsqrt}, symmetry}\\
+&= I_d. && \rul{Prop.~\ref{prop:invsqrt}, whitening identity}
+\end{align*}
+
+\textbf{Step 3 ($z$ is normal).}
+\begin{align*}
+z=Ax+b\ \Longrightarrow\ z\sim\mathcal N(0,I_d). && \rul{affine map of a normal is normal; Steps 1--2}
+\end{align*}
+
+\textbf{Step 4 (independent components).} The entries $z_1,\dots,z_d$ are jointly normal with $\Cov(z_j,z_k)=0$ for $j\neq k$ and $\Var(z_j)=1$, so
+\begin{align*}
+z_1,\dots,z_d\overset{\text{iid}}{\sim}\mathcal N(0,1). && \rul{uncorrelated jointly normal $\Rightarrow$ independent}
+\end{align*}
+
+\textbf{Step 5 (rewrite $d^2$).}
+\begin{align*}
+d^2(x) &= (x-\mu)\T\Sigma^{-1}(x-\mu) && \rul{Def.~\ref{def:mahal}}\\
+&= (x-\mu)\T\Sigma^{-1/2}\Sigma^{-1/2}(x-\mu) && \rul{Prop.~\ref{prop:invsqrt}, $(\Sigma^{-1/2})^2=\Sigma^{-1}$}\\
+&= \big(\Sigma^{-1/2}(x-\mu)\big)\T\big(\Sigma^{-1/2}(x-\mu)\big) && \rul{$(AB)\T=B\T A\T$, symmetry}\\
+&= z\T z=\sum_{j=1}^d z_j^2\ \sim\ \chi^2_d. && \rul{Step 4, Def.~\ref{def:chi2}}
+\end{align*}
+\end{proof}
+
+\noindent\textit{Remark.} The proof uses the true $\mu,\Sigma$. With the plug-in estimates $\hat\mu,\hat\Sigma$ the distance is only approximately $\chi^2_d$; the simulation discussed under Assumption~\ref{as:large} measures the gap for $n=200$, $d=21$.
+\owner{Kanchan Patkar}{Bijun Wu}
+
+%---------------------------------------------------------------------
 \subsection*{Q4. $\Sigma^{-1/2}$ from the eigendecomposition}
-\begin{proposition}
-Let $\Sigma = Q\Lambda Q^\top$ with $Q^\top Q = I$ and $\Lambda = \operatorname{diag}(\lambda_j)$, $\lambda_j>0$. Define $\Sigma^{-1/2} = Q\Lambda^{-1/2}Q^\top$. Then $\Sigma^{-1/2}$ is symmetric, $(\Sigma^{-1/2})^2 = \Sigma^{-1}$, and $\Sigma^{-1/2}\,\Sigma\,\Sigma^{-1/2} = I$.
+%---------------------------------------------------------------------
+\begin{proposition}\label{prop:invsqrt}
+Let $\Sigma=Q\Lambda Q\T$ with $Q\T Q=I$ and $\Lambda=\diag(\lambda_j)$, $\lambda_j>0$. Define $\Sigma^{-1/2}=Q\Lambda^{-1/2}Q\T$. Then $\Sigma^{-1/2}$ is symmetric, $(\Sigma^{-1/2})^2=\Sigma^{-1}$, and $\Sigma^{-1/2}\,\Sigma\,\Sigma^{-1/2}=I$.
 \end{proposition}
-\begin{proof}
-\todo{}
-\end{proof}
-\paragraph{Geometric interpretation.}
-\todo{$Q^\top$ rotates onto the principal axes, $\Lambda^{-1/2}$ rescales each axis by $1/\sqrt{\lambda_j}$, $Q$ rotates back. The ellipse $\{\x: d^2(\x)=c\}$ becomes a circle. Use the hand example: $(5,6)$ and $(5,2)$ have the same Euclidean distance but $d^2 = 8/3$ vs.\ $8$.}
-\signoff{Kanchan Patkar}{Bijun Wu}
 
-% ---------------------------------------------------------------------------
+\begin{proof}
+Here $\Lambda^{-1/2}=\diag(\lambda_1^{-1/2},\dots,\lambda_d^{-1/2})$, which is real because every $\lambda_j>0$ (Def.~\ref{def:eig}). Since $Q$ is square, $Q\T Q=I$ also gives $QQ\T=I$.
+
+\textbf{Step 1 (symmetry).}
+\begin{align*}
+(\Sigma^{-1/2})\T &= (Q\Lambda^{-1/2}Q\T)\T && \rul{definition}\\
+&= (Q\T)\T(\Lambda^{-1/2})\T Q\T && \rul{$(ABC)\T=C\T B\T A\T$}\\
+&= Q\Lambda^{-1/2}Q\T=\Sigma^{-1/2}. && \rul{$(Q\T)\T=Q$; diagonal matrices are symmetric}
+\end{align*}
+
+\textbf{Step 2 ($\Sigma^{-1}=Q\Lambda^{-1}Q\T$).}
+\begin{align*}
+\Sigma\,(Q\Lambda^{-1}Q\T) &= Q\Lambda Q\T Q\Lambda^{-1}Q\T && \rul{Def.~\ref{def:eig}}\\
+&= Q\Lambda\Lambda^{-1}Q\T && \rul{$Q\T Q=I$}\\
+&= QQ\T=I, && \rul{$\Lambda\Lambda^{-1}=I$; $QQ\T=I$}
+\end{align*}
+so $Q\Lambda^{-1}Q\T=\Sigma^{-1}$ [uniqueness of the inverse].
+
+\textbf{Step 3 (square).}
+\begin{align*}
+(\Sigma^{-1/2})^2 &= Q\Lambda^{-1/2}Q\T\,Q\Lambda^{-1/2}Q\T && \rul{definition}\\
+&= Q\Lambda^{-1/2}\Lambda^{-1/2}Q\T && \rul{$Q\T Q=I$}\\
+&= Q\Lambda^{-1}Q\T=\Sigma^{-1}. && \rul{$\lambda_j^{-1/2}\lambda_j^{-1/2}=\lambda_j^{-1}$; Step 2}
+\end{align*}
+
+\textbf{Step 4 (whitening identity).}
+\begin{align*}
+\Sigma^{-1/2}\Sigma\Sigma^{-1/2} &= Q\Lambda^{-1/2}Q\T\,Q\Lambda Q\T\,Q\Lambda^{-1/2}Q\T && \rul{definition, Def.~\ref{def:eig}}\\
+&= Q\Lambda^{-1/2}\Lambda\Lambda^{-1/2}Q\T && \rul{$Q\T Q=I$, twice}\\
+&= QIQ\T=I. && \rul{$\lambda_j^{-1/2}\lambda_j\lambda_j^{-1/2}=1$; $QQ\T=I$}
+\end{align*}
+\end{proof}
+
+\noindent\textbf{Geometric interpretation.} For $y=x-\mu$, the whitening map is
+\[
+z=\Sigma^{-1/2}y=Q\,\Lambda^{-1/2}\,(Q\T y).
+\]
+The map has three steps: (i) $Q\T y$ rotates $y$ (possibly with a reflection) onto the principal axes $q_1,\dots,q_d$, so coordinate $j$ is $q_j\T y$; (ii) $\Lambda^{-1/2}$ divides coordinate $j$ by $\sqrt{\lambda_j}$, the standard deviation along $q_j$; (iii) $Q$ rotates back. By Steps 1 and 3,
+\[
+d^2(x)=y\T\Sigma^{-1/2}\Sigma^{-1/2}y=\|z\|^2,
+\]
+so the Mahalanobis distance is the Euclidean distance after whitening. The ellipsoid $\{x:d^2(x)=c\}$ has semi-axes $\sqrt{c\lambda_j}$ along $q_j$; after step (ii) every semi-axis is $\sqrt c$, so it becomes a sphere of radius $\sqrt c$ (an ellipse and a circle when $d=2$).
+
+\textit{Hand example (Section~\ref{sec:hand}).} $\hat\Sigma=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ has $\lambda_1=3$ with $q_1=\tfrac1{\sqrt2}(1,1)$ and $\lambda_2=1$ with $q_2=\tfrac1{\sqrt2}(1,-1)$, so the ellipse $d^2=c$ has half-length $\sqrt{3c}$ along $(1,1)$ and half-width $\sqrt c$ along $(1,-1)$. The points $(5,6)$ and $(5,2)$ have deviations $y=(2,2)$ and $y=(2,-2)$ from $\hat\mu=(3,4)$, both with Euclidean length $\sqrt8$. In principal-axis coordinates,
+\[
+Q\T(2,2)\T=(2\sqrt2,\,0),\qquad Q\T(2,-2)\T=(0,\,2\sqrt2).
+\]
+Rescaling gives $(2\sqrt2/\sqrt3,\,0)$ and $(0,\,2\sqrt2)$, so $d^2(5,6)=8/3$ and $d^2(5,2)=8$. The user varies more along the direction of the first point than along the direction of the second. The second point therefore has three times the squared Mahalanobis distance, despite having the same Euclidean distance from the mean.
+\owner{Kanchan Patkar}{Bijun Wu}
+
+%---------------------------------------------------------------------
 \subsection*{Q5. Threshold and false-alarm rate}
-\begin{proposition}
-Let $\tau = \chi^2_{d,1-\alpha}$ be the $(1-\alpha)$ quantile of $\chi^2_d$. If $\x$ is a normal reading, $\Pr\big(d^2(\x) > \tau\big) = \alpha$.
+%---------------------------------------------------------------------
+\begin{proposition}\label{prop:far}
+Let $\tau=\chi^2_{d,1-\alpha}$ be the $(1-\alpha)$ quantile of $\chi^2_d$. If $x\sim\mathcal N(\mu,\Sigma)$ is a normal reading and $d^2(x)$ uses the true $\mu,\Sigma$, then $\Pr\big(d^2(x)>\tau\big)=\alpha$. Among $m$ independent normal readings, the expected number of false alarms is $m\alpha$.
 \end{proposition}
-\begin{proof}
-\todo{}
-\end{proof}
-\signoff{Kanchan Patkar}{Bijun Wu}
 
-% ---------------------------------------------------------------------------
-\subsection*{Additional result (optional)}
-\begin{proposition}
+\begin{proof}
+\textbf{Step 1 (single reading).}
+\begin{align*}
+\Pr\big(d^2(x)>\tau\big) &= 1-\Pr\big(d^2(x)\le\tau\big) && \rul{complement rule}\\
+&= 1-F_{\chi^2_d}(\tau) && \rul{Thm.~\ref{thm:chi2}, $d^2(x)\sim\chi^2_d$}\\
+&= 1-(1-\alpha)=\alpha. && \rul{Def.~\ref{def:quant}, quantile}
+\end{align*}
+$F_{\chi^2_d}$ is continuous and strictly increasing on $(0,\infty)$, so $\tau$ exists and is unique, and $\Pr(d^2(x)=\tau)=0$; flagging with $\ge$ instead of $>$ gives the same rate.
+
+\textbf{Step 2 ($m$ readings).} Let $I_k=\mathbf 1\{d^2(x_k)>\tau\}$.
+\begin{align*}
+\E\Big[\sum_{k=1}^m I_k\Big] &= \sum_{k=1}^m\E[I_k] && \rul{linearity of expectation}\\
+&= \sum_{k=1}^m\Pr\big(d^2(x_k)>\tau\big)=m\alpha. && \rul{$\E[\mathbf 1_A]=\Pr(A)$; Step 1}
+\end{align*}
+\end{proof}
+
+\noindent\textit{Remark.} The observed rate $\frac1m\sum_k I_k$ is a sample proportion with standard error $\sqrt{\alpha(1-\alpha)/m}$. For the simulation ($m=5000$, $\alpha=0.01$) this is $0.0014$, so the observed rate of $0.0102$ in Table~\ref{tab:far} is within one standard error of the target. With plug-in $\hat\mu,\hat\Sigma$ the result is only approximate (Assumption~\ref{as:large}).
+\owner{Kanchan Patkar}{Bijun Wu}
+
+%---------------------------------------------------------------------
+\subsection*{Additional result}
+%---------------------------------------------------------------------
+\begin{proposition}\label{prop:meand}
 With the MLEs, the average squared Mahalanobis distance over the training data is exactly $d$:
-$\frac1n\sum_{i=1}^n (\x_i-\hmu)^\top\hSigma^{-1}(\x_i-\hmu) = d$.
+$\frac1n\sum_{i=1}^n(x_i-\hat\mu)\T\hat\Sigma^{-1}(x_i-\hat\mu)=d$.
 \end{proposition}
+
 \begin{proof}
-\todo{Use $\mathbf{a}^\top A\mathbf{a} = \tr(A\mathbf{a}\mathbf{a}^\top)$ and linearity of trace.}
+Let $v_i=x_i-\hat\mu$.
+\begin{align*}
+\sum_{i=1}^n v_i\T\hat\Sigma^{-1}v_i &= \sum_{i=1}^n\tr\big(\hat\Sigma^{-1}v_iv_i\T\big) && \rul{scalar $=$ its trace; cyclic property}\\
+&= \tr\Big(\hat\Sigma^{-1}\sum_{i=1}^n v_iv_i\T\Big) && \rul{linearity of trace}\\
+&= \tr\big(\hat\Sigma^{-1}\,n\hat\Sigma\big) && \rul{Thm.~\ref{thm:mle}, $\textstyle\sum_i v_iv_i\T=n\hat\Sigma$}\\
+&= n\,\tr(I_d)=nd. && \rul{$\hat\Sigma^{-1}\hat\Sigma=I_d$; $\tr(I_d)=d$}
+\end{align*}
+Dividing by $n$ gives $d$.
 \end{proof}
-\signoff{\todo{}}{\todo{}}
 
-% ===========================================================================
-\section{Hand-Worked Example}
-% ===========================================================================
-Data ($n=4$, $d=2$): $\x_1=(1,2)$, $\x_2=(3,4)$, $\x_3=(5,4)$, $\x_4=(3,6)$.
+\noindent This algebraic identity holds regardless of whether the data are normal. The mean training distance therefore cannot test normality. We evaluate the false-alarm rate on held-out genuine typings, as discussed under Assumption~\ref{as:large}. In the hand example the four training distances are $8/3,\,0,\,8/3,\,8/3$, with mean $2=d$.
+\owner{Kanchan Patkar}{Bijun Wu}
 
-\todo{Show by hand: $\hmu = (3,4)$; $X_c$; $\hSigma = \begin{pmatrix}2&1\\1&2\end{pmatrix}$; eigenvalues $3,1$ with eigenvectors $\tfrac{1}{\sqrt2}(1,1)$, $\tfrac{1}{\sqrt2}(1,-1)$; $\hSigma^{-1} = \tfrac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}$; $d^2(5,6) = 8/3$ and $d^2(5,2) = 8$; with $\tau = \chi^2_{2,0.95} = 5.991$ only $(5,2)$ is flagged. These numbers match the output of \texttt{src/simulate.py}, Part A.}
+%=====================================================================
+\section{Hand-worked example}\label{sec:hand}
+%=====================================================================
+Data ($n=4$, $d=2$): $x_1=(1,2)$, $x_2=(3,4)$, $x_3=(5,4)$, $x_4=(3,6)$.
 
-% ===========================================================================
+\textbf{Mean (Thm.~\ref{thm:mle}).} $\hat\mu=\tfrac14\big(1+3+5+3,\ 2+4+4+6\big)=(3,4)$.
+
+\textbf{Centred data and covariance (Thm.~\ref{thm:mle}).}
+\[
+X_c=\begin{pmatrix}-2&-2\\0&0\\2&0\\0&2\end{pmatrix},\qquad
+X_c\T X_c=\begin{pmatrix}8&4\\4&8\end{pmatrix},\qquad
+\hat\Sigma=\tfrac14X_c\T X_c=\begin{pmatrix}2&1\\1&2\end{pmatrix}.
+\]
+Entry by entry, $(X_c\T X_c)_{11}=4+0+4+0$, $(X_c\T X_c)_{12}=4+0+0+0$, $(X_c\T X_c)_{22}=4+0+0+4$ [matrix product as a sum over rows].
+
+\textbf{Eigendecomposition (Def.~\ref{def:eig}).} $\det(\hat\Sigma-\lambda I)=(2-\lambda)^2-1=0$ gives $\lambda_1=3$, $\lambda_2=1$. Solving $(\hat\Sigma-\lambda I)q=0$ gives $q_1=\tfrac1{\sqrt2}(1,1)$ and $q_2=\tfrac1{\sqrt2}(1,-1)$. Both eigenvalues are positive, so $\hat\Sigma$ is positive definite (Assumption~\ref{as:pd}).
+
+\textbf{Inverse and inverse square root (Prop.~\ref{prop:invsqrt}).}
+\[
+\hat\Sigma^{-1}=Q\Lambda^{-1}Q\T=\tfrac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix},\qquad
+\hat\Sigma^{-1/2}=Q\Lambda^{-1/2}Q\T=\tfrac12\begin{pmatrix}1+\tfrac1{\sqrt3}&\tfrac1{\sqrt3}-1\\[2pt]\tfrac1{\sqrt3}-1&1+\tfrac1{\sqrt3}\end{pmatrix}.
+\]
+Check: $\hat\Sigma\hat\Sigma^{-1}=\tfrac13\begin{pmatrix}4-1&-2+2\\2-2&-1+4\end{pmatrix}=I$.
+
+\textbf{Distances of two new readings (Def.~\ref{def:mahal}).} With $y=x-\hat\mu$ and $y\T\hat\Sigma^{-1}y=\tfrac13(2y_1^2-2y_1y_2+2y_2^2)$:
+\begin{align*}
+x=(5,6):&\quad y=(2,2),\quad d^2=\tfrac13(8-8+8)=\tfrac83\approx2.67,\\
+x=(5,2):&\quad y=(2,-2),\quad d^2=\tfrac13(8+8+8)=8.
+\end{align*}
+Both have Euclidean distance $\sqrt8\approx2.83$ from $\hat\mu$.
+
+\textbf{Decision (Prop.~\ref{prop:far}).} With $\alpha=0.05$, $\tau=\chi^2_{2,0.95}=5.991$. Since $8/3<5.991<8$, only $(5,2)$ is flagged as anomalous. This only illustrates the plug-in rule: $\hat\mu,\hat\Sigma$ are estimated from $n=4$ points, so the 5\% false-alarm rate of Prop.~\ref{prop:far} is not guaranteed here (Assumption~\ref{as:large}).
+
+\textbf{Check of Prop.~\ref{prop:meand}.} The training distances are $d^2(x_1)=\tfrac13(8-8+8)=\tfrac83$, $d^2(x_2)=0$, $d^2(x_3)=\tfrac13\cdot8=\tfrac83$, $d^2(x_4)=\tfrac13\cdot8=\tfrac83$; their mean is $\tfrac14\cdot8=2=d$.
+
+These numbers match the output of \texttt{src/simulate.py}, Part A.
+
+%=====================================================================
 \section{Algorithm}
-% ===========================================================================
-\begin{table}[H]
-\centering
-\begin{tabularx}{\textwidth}{@{}c X l l@{}}
+%=====================================================================
+\textbf{Input:} raw training timings $X^{\text{raw}}\in\R^{n\times d}$ of user $u$ (all entries $>0$), a new raw typing $x^{\text{raw}}\in\R^d$, and a target false-alarm rate $\alpha\in(0,1)$.\\
+\textbf{Output:} the squared Mahalanobis distance $d^2(x)$ and the decision ``genuine'' or ``anomalous''.
+
+\medskip\noindent\textbf{Fitting (once per genuine user).}
+\begin{enumerate}[label=(\arabic*), start=0, leftmargin=*]
+\item \textbf{Log transform.} $X_{ij}=\log X^{\text{raw}}_{ij}$ for $i=1,\dots,n$, $j=1,\dots,d$.
+\item \textbf{Mean (Q1).} $\hat\mu=\frac1n X\T\mathbf 1$, i.e.\ $\hat\mu_j=\frac1n\sum_{i=1}^n X_{ij}$.
+\item \textbf{Centre.} $X_c=X-\mathbf 1\hat\mu\T$, i.e.\ $(X_c)_{ij}=X_{ij}-\hat\mu_j$.
+\item \textbf{Covariance (Q1).} $\hat\Sigma=\frac1n X_c\T X_c$, i.e.\ $\hat\Sigma_{jk}=\frac1n\sum_{i=1}^n(X_c)_{ij}(X_c)_{ik}$. Only the $d(d+1)/2$ entries with $j\le k$ are computed; the rest follow from $\hat\Sigma_{kj}=\hat\Sigma_{jk}$.
+\item \textbf{Eigendecomposition (Q4).} $\hat\Sigma=Q\Lambda Q\T$ with $Q\T Q=I$, $\Lambda=\diag(\lambda_1,\dots,\lambda_d)$. Check $\lambda_{\min}>0$ (Assumption~\ref{as:pd}); otherwise stop, or use $\hat\Sigma+\varepsilon I$.
+\item \textbf{Inverse square root (Q4).} $\Lambda^{-1/2}=\diag(\lambda_1^{-1/2},\dots,\lambda_d^{-1/2})$ and $W=\hat\Sigma^{-1/2}=Q\Lambda^{-1/2}Q\T$.
+\item \textbf{Threshold (Q5).} $\tau=\chi^2_{d,1-\alpha}$, the value with $\Pr(\chi^2_d\le\tau)=1-\alpha$.
+\end{enumerate}
+
+\noindent\textbf{Scoring (for each new typing).}
+\begin{enumerate}[label=(\arabic*), start=7, leftmargin=*]
+\item \textbf{Log and centre.} $x=\log x^{\text{raw}}$ (entrywise), $v=x-\hat\mu$.
+\item \textbf{Whiten (Q3, Q4).} $z=Wv$.
+\item \textbf{Distance (Q2, Q3).} $d^2(x)=z\T z=\sum_{j=1}^d z_j^2$. This equals $v\T\hat\Sigma^{-1}v$ because $W\T W=W^2=\hat\Sigma^{-1}$ (Q4).
+\item \textbf{Decide (Q5).} Flag $x$ as anomalous if $d^2(x)>\tau$, otherwise accept it as genuine.
+\end{enumerate}
+
+\noindent\textbf{Sizes and operation counts.} One operation is one addition, subtraction, multiplication, division, square root or logarithm. We report leading-order counts.
+
+\begin{center}
+\small
+\begin{tabular}{@{}clp{3.2cm}p{4.6cm}l@{}}
 \toprule
-Step & Operation & Sizes & Cost \\
+Step & Operation & Sizes & Operations & Order \\
 \midrule
-1 & $\hmu = \frac1n X^\top\one$ & $X\in\R^{n\times d}$ & $O(nd)$ \\
-2 & $X_c = X - \one\hmu^\top$ & $\R^{n\times d}$ & $O(nd)$ \\
-3 & $\hSigma = \frac1n X_c^\top X_c$ & $\R^{d\times d}$ & $O(nd^2)$ \\
-4 & Eigendecomposition $\hSigma = Q\Lambda Q^\top$ & $Q,\Lambda\in\R^{d\times d}$ & $O(d^3)$ \\
-5 & $\hSigma^{-1/2} = Q\Lambda^{-1/2}Q^\top$ & $\R^{d\times d}$ & $O(d^3)$ \\
-6 & $\tau = \chi^2_{d,1-\alpha}$ & scalar & $O(1)$ \\
-7 & For a new reading $\x$: $\z = \hSigma^{-1/2}(\x-\hmu)$, $d^2 = \z^\top\z$ & $\z\in\R^d$ & $O(d^2)$ \\
-8 & Flag $\x$ as anomalous if $d^2 > \tau$ & --- & $O(1)$ \\
+0 & $X=\log X^{\text{raw}}$ & $\R^{n\times d}\to\R^{n\times d}$ & $nd$ logs & $O(nd)$ \\
+1 & $\hat\mu=\frac1n X\T\mathbf 1$ & $\R^{n\times d}\to\R^d$ & $d(n-1)$ adds $+$ $d$ divs $\approx nd$ & $O(nd)$ \\
+2 & $X_c=X-\mathbf 1\hat\mu\T$ & $\R^{n\times d}$ & $nd$ subtractions & $O(nd)$ \\
+3 & $\hat\Sigma=\frac1n X_c\T X_c$ & $\R^{d\times n}\cdot\R^{n\times d}\to\R^{d\times d}$ & $\frac{d(d+1)}{2}\cdot2n\approx nd^2$ & $O(nd^2)$ \\
+4 & $\hat\Sigma=Q\Lambda Q\T$ & $\R^{d\times d}\to Q,\Lambda\in\R^{d\times d}$ & $\approx9d^3$ (symmetric QR algorithm) & $O(d^3)$ \\
+5 & $W=Q\Lambda^{-1/2}Q\T$ & $\R^{d\times d}$ & $2d$ for $\Lambda^{-1/2}$, $d^2$ to scale columns, $2d^3$ for the product & $O(d^3)$ \\
+6 & $\tau=\chi^2_{d,1-\alpha}$ & scalar & constant (numerical inverse CDF) & $O(1)$ \\
+7 & $x=\log x^{\text{raw}}$, $v=x-\hat\mu$ & $\R^d$ & $2d$ & $O(d)$ \\
+8 & $z=Wv$ & $\R^{d\times d}\cdot\R^d\to\R^d$ & $d^2$ mults $+$ $d(d-1)$ adds $\approx2d^2$ & $O(d^2)$ \\
+9 & $d^2=z\T z$ & $\R^d\to$ scalar & $d$ mults $+$ $(d-1)$ adds $\approx2d$ & $O(d)$ \\
+10 & compare $d^2>\tau$ & scalar & 1 & $O(1)$ \\
 \bottomrule
-\end{tabularx}
-\end{table}
-\todo{Check the costs; add the total cost of fitting, $O(nd^2 + d^3)$, and scoring $m$ new points, $O(md^2)$.}
+\end{tabular}
+\end{center}
 
-% ===========================================================================
-\section{Data and Simulation}
-% ===========================================================================
-\subsection{Real Data}
-\paragraph{Source.} CMU Keystroke Dynamics Benchmark Data Set (Killourhy and Maxion, 2009), file \texttt{DSL-StrongPasswordData.csv}, available at \url{https://www.cs.cmu.edu/~keystroke/}. This is the dataset suggested for Project~9. The raw file is not stored in the repository; the README explains how to download it into \texttt{data/}. It is loaded and described by \texttt{src/load.py}, and all numbers below come from that script.
+\noindent\textbf{Total cost.}
+\begin{itemize}
+\item Fitting (steps 0--6): about $3nd+nd^2+11d^3$ operations, i.e.\ $O(nd^2+d^3)$. Since $n>d$ is required (Assumption~\ref{as:pd}), the $nd^2$ term for $\hat\Sigma$ and the $d^3$ term for the eigendecomposition are of similar size here.
+\item Scoring $m$ new typings (steps 7--10): about $m(2d^2+4d)$ operations, i.e.\ $O(md^2)$. In matrix form, $Z=(X_{\text{new}}-\mathbf 1_m\hat\mu\T)\,W$ with $X_{\text{new}}\in\R^{m\times d}$, and $d^2_i=\sum_j Z_{ij}^2$.
+\item Our data ($n=200$, $d=21$, $m=m_{\text{gen}}+m_{\text{imp}}=450$): fitting takes about $3\cdot4{,}200+88{,}200+101{,}871\approx2.0\times10^5$ operations, and scoring about $450\cdot966\approx4.3\times10^5$, so roughly $6\times10^5$ operations per genuine user and $3\times10^7$ for all 51 users. This computation is small enough to run on a laptop.
+\end{itemize}
 
-\paragraph{Size.} $20{,}400$ rows and $34$ columns: 51 subjects $\times$ 8 sessions $\times$ 50 repetitions, with exactly 400 rows for every subject. One row is one typing of the password \texttt{.tie5Roanl} followed by Return.
+\noindent\textbf{Choice of whitening.} We could compute $\hat\Sigma^{-1}$ and use $d^2=v\T\hat\Sigma^{-1}v$, which has the same order of cost. We use $W=\hat\Sigma^{-1/2}$ because the eigendecomposition in step 4 also gives the eigenvalues needed to check positive definiteness and the condition number (Assumption~\ref{as:pd}). The whitened vectors $z$ also let us check Q3 directly: their covariance should be $I$.
 
-\paragraph{Variables and types.}
-\begin{table}[H]
-\centering
-\begin{tabularx}{\textwidth}{@{}l c l X@{}}
+%=====================================================================
+\section{Data and simulation}
+%=====================================================================
+\subsection{Real data}
+We use the CMU Keystroke Dynamics Benchmark Data Set (Killourhy and Maxion, 2009), file \texttt{DSL-StrongPasswordData.csv}, available at \url{https://www.cs.cmu.edu/~keystroke/}. This is the dataset suggested for Project 9. The raw file is not stored in the repository; the README explains how to download it into \texttt{data/}. \texttt{src/load.py} loads and describes the data and produces the numerical summaries reported here.
+
+The dataset has 20,400 rows and 34 columns: 51 subjects $\times$ 8 sessions $\times$ 50 repetitions, with exactly 400 rows for every subject. One row is one typing of the password \texttt{.tie5Roanl} followed by Return.
+
+\begin{center}
+\small
+\begin{tabular}{@{}lllp{6cm}@{}}
 \toprule
 Column(s) & Count & Type & Meaning \\
 \midrule
@@ -426,53 +620,60 @@ Column(s) & Count & Type & Meaning \\
 \texttt{sessionIndex} & 1 & integer, 1--8 & session number (sessions on different days) \\
 \texttt{rep} & 1 & integer, 1--50 & repetition within the session \\
 \texttt{H.}$k$ & 11 & float, seconds, $>0$ & hold time of key $k$ \\
-\texttt{DD.}$k$\texttt{.}$k'$ & 10 & float, seconds, $>0$ & keydown--keydown latency from key $k$ to the next key $k'$ \\
-\texttt{UD.}$k$\texttt{.}$k'$ & 10 & float, seconds & keyup--keydown latency; negative if the keys overlap \\
+\texttt{DD.}$k.k'$ & 10 & float, seconds, $>0$ & keydown--keydown latency from key $k$ to the next key $k'$ \\
+\texttt{UD.}$k.k'$ & 10 & float, seconds & keyup--keydown latency; negative if the keys overlap \\
 \bottomrule
-\end{tabularx}
-\end{table}
+\end{tabular}
+\end{center}
+
 The 11 keys are \texttt{period}, \texttt{t}, \texttt{i}, \texttt{e}, \texttt{five}, \texttt{Shift.r}, \texttt{o}, \texttt{a}, \texttt{n}, \texttt{l} and \texttt{Return}.
 
-\paragraph{Missing values and data quality.} There are no missing values and no duplicate rows, so no imputation is needed. All \texttt{H} and \texttt{DD} timings are strictly positive (smallest values $0.0014$\,s and $0.0011$\,s), so the log transform is defined for every model feature. \texttt{UD} is negative in $22{,}118$ of the $204{,}000$ \texttt{UD} entries ($10.8\%$, in $11{,}065$ rows), i.e.\ the next key was pressed before the previous one was released. The largest timing is $25.99$\,s, a long pause. We confirmed numerically that $UD_{k,k+1} = DD_{k,k+1} - H_k$ for every row and key pair: the maximum absolute difference is $8.9\times10^{-16}$\,s, zero up to floating-point rounding.
+There are no missing values and no duplicate rows, so no imputation is needed. All H and DD timings are strictly positive (smallest values 0.0014\,s and 0.0011\,s), so the log transform is defined for every model feature. UD is negative in 22,118 of the 204,000 UD entries (10.8\%, in 11,065 rows), i.e.\ the next key was pressed before the previous one was released. The largest timing is 25.99\,s, a long pause. We confirmed numerically that $UD_{k,k+1}=DD_{k,k+1}-H_k$ for every row and key pair: the maximum absolute difference is $8.9\times10^{-16}$\,s, zero up to floating-point rounding.
 
-\paragraph{Summary statistics.} Table~\ref{tab:real-summary} shows five features over all 20{,}400 typings. Raw timings are strongly right-skewed with long tails (\texttt{DD.t.i} has mean $0.17$\,s but maximum $4.92$\,s). The log transform removes most of the skewness: the median skewness over the 21 model features falls from $3.56$ (raw) to $-0.13$ (log). \texttt{UD.t.i} has negative values, so it has no log.
+Table~\ref{tab:summary} shows five features over all 20,400 typings (all subjects pooled). Raw timings are strongly right-skewed with long tails (\texttt{DD.t.i} has mean 0.17\,s but maximum 4.92\,s). The log transform removes most of the skewness: the median skewness over the 21 model features falls from 3.56 (raw) to $-0.13$ (log). \texttt{UD.t.i} has negative values, so we do not log-transform it.
+
 \begin{table}[H]
 \centering
+\small
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
 Feature & Mean & Std & Min & Max & Skew (raw) & Skew (log) \\
 \midrule
-\texttt{H.t}             & 0.0857 & 0.0274 & 0.0093 & 0.2411 & 0.90 & $-0.02$ \\
-\texttt{DD.t.i}          & 0.1691 & 0.1235 & 0.0011 & 4.9197 & 9.11 & 0.66 \\
-\texttt{UD.t.i}          & 0.0834 & 0.1258 & $-0.1621$ & 4.7999 & 8.73 & --- \\
-\texttt{H.Return}        & 0.0883 & 0.0275 & 0.0029 & 0.2651 & 0.73 & $-1.00$ \\
+\texttt{H.t} & 0.0857 & 0.0274 & 0.0093 & 0.2411 & 0.90 & $-0.02$ \\
+\texttt{DD.t.i} & 0.1691 & 0.1235 & 0.0011 & 4.9197 & 9.11 & 0.66 \\
+\texttt{UD.t.i} & 0.0834 & 0.1258 & $-0.1621$ & 4.7999 & 8.73 & --- \\
+\texttt{H.Return} & 0.0883 & 0.0275 & 0.0029 & 0.2651 & 0.73 & $-1.00$ \\
 \texttt{DD.five.Shift.r} & 0.4389 & 0.2603 & 0.1694 & 8.3702 & 7.22 & 1.14 \\
 \bottomrule
 \end{tabular}
-\caption{Summary statistics in seconds, all subjects.}
-\label{tab:real-summary}
+\caption{Summary statistics in seconds, all subjects pooled.}
+\label{tab:summary}
 \end{table}
 
-\paragraph{Normal vs.\ anomalous rows.} For a genuine user $u$, the 400 rows with \texttt{subject} $= u$ are normal: rows with \texttt{sessionIndex} $\le 4$ (200 typings) are used for training, and rows with \texttt{sessionIndex} $\ge 5$ (200 typings) are held-out normal test data. The anomalies are the impostor typings: rows with \texttt{sessionIndex} $= 1$ and \texttt{rep} $\le 5$ from each of the other 50 subjects (250 typings). This is repeated with each of the 51 subjects as the genuine user. For example, for $u = $ \texttt{s002} the script gives 200 training, 200 genuine test and 250 impostor test typings from 50 other subjects.
+For a genuine user $u$, the 400 rows with \texttt{subject} $=u$ are normal: rows with \texttt{sessionIndex} $\le4$ (200 typings) are used for training, and rows with \texttt{sessionIndex} $\ge5$ (200 typings) are held-out normal test data. The anomalies are the impostor typings: rows with \texttt{sessionIndex} $=1$ and \texttt{rep} $\le5$ from each of the other 50 subjects (250 typings). This is repeated with each of the 51 subjects as the genuine user. For example, for $u=\texttt{s002}$ the script gives 200 training, 200 genuine test and 250 impostor test typings from 50 other subjects.
 
-\paragraph{Preprocessing.} Keep the 21 features \texttt{H.}$k$ and \texttt{DD.}$k$\texttt{.}$k'$, drop the 10 \texttt{UD} columns, and take the natural log of every feature. For user \texttt{s002}, the covariance of all 31 raw features has 10 zero eigenvalues (singular, as predicted by Assumption~\ref{as:pd}); with the 21 raw features it is positive definite with condition number $1.6\times10^{3}$; with the 21 log features the smallest eigenvalue is $0.0062$ and the condition number is $68$, so $\hSigma^{-1}$ is well defined.
+For preprocessing, we keep the 21 features \texttt{H.}$k$ and \texttt{DD.}$k.k'$, drop the 10 UD columns, and take the natural log of every feature. For user \texttt{s002}, the covariance of all 31 raw features has 10 zero eigenvalues (singular, as predicted by Assumption~\ref{as:pd}); with the 21 raw features it is positive definite with condition number $1.6\times10^3$; with the 21 log features the smallest eigenvalue is 0.0062 and the condition number is 68, so $\hat\Sigma^{-1}$ is well defined.
 
-% Plot 1: why the log transform is needed (Assumption 2)
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\textwidth]{real_hold_time_hist.png}
-\caption{Hold time of the key \texttt{t} for subject \texttt{s002} (400 typings), raw seconds (left) and log seconds (right), with a fitted normal density. The log reduces the skewness from 1.76 to 1.09 but does not remove the right tail completely, so normality (Assumption~\ref{as:normal}) must still be checked in Iteration 3.}
+\fig{0.95\textwidth}{real_hold_time_hist.png}
+\caption{Hold time of the key \texttt{t} for subject \texttt{s002} only (400 typings), raw seconds (left) and log seconds (right), with a fitted normal density. For this subject the log reduces the skewness from 1.76 to 1.09 (Table~\ref{tab:summary} reports different values because it pools all subjects) but does not remove the right tail completely, so normality (Assumption~\ref{as:normal}) must still be checked in Iteration 3.}
+\label{fig:hold}
 \end{figure}
 
-% Plot 2: practice / drift over sessions (Assumption 1)
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\textwidth]{real_typing_time_by_rep.png}
-\caption{Total typing time (sum of the 10 \texttt{DD} latencies, log scale) against repetition $1,\dots,400$ for four subjects, coloured by session, with the session medians in red. Typing gets faster with practice: over all subjects the median total time falls from $2.71$\,s in session 1 to $1.99$\,s in session 8, with the largest drop early on. Some subjects (e.g.\ \texttt{s002}) slow down again in the last sessions. The typings are therefore not identically distributed over time (Assumption~\ref{as:iid}), and a model fitted on sessions 1--4 may raise false alarms on sessions 5--8.}
+\fig{0.95\textwidth}{real_typing_time_by_rep.png}
+\caption{Total typing time (sum of the 10 DD latencies, log scale) against repetition $1,\dots,400$ for four subjects, coloured by session, with the session medians in red. Typing gets faster with practice: over all subjects the median total time falls from 2.71\,s in session 1 to 1.99\,s in session 8, with the largest drop early on. Some subjects (e.g.\ \texttt{s002}) slow down again in the last sessions. The typings are therefore not identically distributed over time (Assumption~\ref{as:iid}), and a model fitted on sessions 1--4 may raise false alarms on sessions 5--8.}
+\label{fig:practice}
 \end{figure}
 
 \subsection{Simulation Check}
-\paragraph{Model.} $\x_i \overset{\text{iid}}{\sim} \Normal(\bmu,\Sigma)$ with $d=5$, $\bmu=\mathbf{0}$, $\Sigma = BB^\top + 5I$ where $B$ has i.i.d.\ $\Normal(0,1)$ entries; $n=5000$; $\alpha=0.01$; seed \texttt{np.random.default\_rng(0)}. Code: \texttt{src/simulate.py}.
+We simulate $x_i\overset{\text{iid}}{\sim}\mathcal N(\mu,\Sigma)$ with $d=5$, $\mu=0$, $\Sigma=BB\T+5I$ where $B$ has i.i.d.\ $\mathcal N(0,1)$ entries; $n=5000$; $\alpha=0.01$; seed \texttt{np.random.default\_rng(0)}. Code: \texttt{src/simulate.py}.
+
+\textit{Shifted attacks.} We draw 50 attack points from $\mathcal N(\mu+4\cdot\mathbf 1,\Sigma)$ (every coordinate shifted by $+4$) and score them with the $\hat\mu,\hat\Sigma$ fitted to the normal training data, at $\tau=\chi^2_{5,0.99}=15.09$.
+
+\textit{Heavy tails.} We draw $n=5000$ points from a multivariate $t$ distribution with 3 degrees of freedom, $x_i=\mu+y_i/\sqrt{w_i/3}$ with $y_i\sim\mathcal N(0,\Sigma)$ and $w_i\sim\chi^2_3$ independent, using the same $\mu$ and $\Sigma$. Its covariance is $3\Sigma$, so we refit $\hat\mu,\hat\Sigma$ to these points and score the same points with the $\chi^2_5$ thresholds.
 
 \begin{table}[H]
 \centering
@@ -491,10 +692,11 @@ $\Sigma_{33}$ & 12.3961 & 12.2060 & 0.1901 \\
 $\Sigma_{44}$ & 7.1888 & 7.1524 & 0.0363 \\
 $\Sigma_{55}$ & 8.2660 & 8.1314 & 0.1347 \\
 \midrule
-$\|\hSigma-\Sigma\|_F/\|\Sigma\|_F$ & --- & 0.0290 & --- \\
+$\|\hat\Sigma-\Sigma\|_F/\|\Sigma\|_F$ & --- & 0.0290 & --- \\
 \bottomrule
 \end{tabular}
 \caption{True parameters vs.\ maximum-likelihood estimates.}
+\label{tab:mle}
 \end{table}
 
 \begin{table}[H]
@@ -503,40 +705,56 @@ $\|\hSigma-\Sigma\|_F/\|\Sigma\|_F$ & --- & 0.0290 & --- \\
 \toprule
 $\alpha$ & $\tau=\chi^2_{5,1-\alpha}$ & False-alarm rate (normal) & False-alarm rate ($t_3$) \\
 \midrule
-0.10 & 9.2364  & 0.1010 & 0.0982 \\
+0.10 & 9.2364 & 0.1010 & 0.0982 \\
 0.05 & 11.0705 & 0.0516 & 0.0796 \\
 0.01 & 15.0863 & 0.0102 & 0.0504 \\
 \bottomrule
 \end{tabular}
-\caption{Observed false-alarm rates. Normal data match $\alpha$; heavy-tailed $t_3$ data do not.}
+\caption{Observed false-alarm rates. Normal data match $\alpha$; heavy-tailed $t_3$ data do not. The discrepancy is largest at small $\alpha$: at $\alpha=0.10$ the $t_3$ rate happens to be close to $\alpha$, but at our anomaly-detection target of $\alpha=0.01$, it is five times the target rate.}
+\label{tab:far}
 \end{table}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.75\textwidth]{sim_d2_hist.png}
+\fig{0.7\textwidth}{sim_d2_hist.png}
 \caption{Histogram of $d^2$ for the simulated normal data with the $\chi^2_5$ density and the threshold $\tau$.}
+\label{fig:d2hist}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.48\textwidth]{sim_d2_qq.png}\hfill
-\includegraphics[width=0.48\textwidth]{sim_d2_heavy_tail.png}
+\fig{0.48\textwidth}{sim_d2_qq.png}\hfill
+\fig{0.48\textwidth}{sim_d2_heavy_tail.png}
 \caption{Left: Q-Q plot of $d^2$ against $\chi^2_5$ (normal data). Right: $d^2$ for $t_3$ data no longer follows $\chi^2_5$.}
+\label{fig:qq}
 \end{figure}
 
-\paragraph{What each derivation's check shows.}
-\begin{itemize}[leftmargin=*]
-\item \textbf{Q1:} $\hmu,\hSigma$ are close to $\bmu,\Sigma$ (relative error 2.9\%), and 20 random perturbations of $(\hmu,\hSigma)$ all lower the log-likelihood.
-\item \textbf{Q2:} all eigenvalues of $\hSigma$ are positive (5.05 to 13.11) and $\min_i d^2_i = 0.060 \ge 0$.
-\item \textbf{Q3:} $d^2$ has variance 10.20 (theory: 10), and a Kolmogorov--Smirnov test against $\chi^2_5$ gives $p = 0.47$.
-\item \textbf{Q4:} $\hSigma^{-1/2}$ is symmetric, $\hSigma^{-1/2}\hSigma\,\hSigma^{-1/2} = I$, and the whitened data have identity covariance.
-\item \textbf{Q5:} the observed false-alarm rate matches $\alpha$ at all three levels for normal data.
-\item \textbf{Assumption 2:} with $t_3$ data the false-alarm rate at $\alpha = 0.01$ is 0.050, five times too high.
+\noindent\textbf{Checks against the derivations.}
+\begin{itemize}
+\item \textbf{Q1:} $\hat\mu,\hat\Sigma$ are close to $\mu,\Sigma$ (relative error 2.9\%, Table~\ref{tab:mle}), and 20 random perturbations of $(\hat\mu,\hat\Sigma)$ all lower the log-likelihood.
+\item \textbf{Q2:} all eigenvalues of $\hat\Sigma$ are positive (5.05 to 13.11) and $\min_i d^2_i=0.060\ge0$.
+\item \textbf{Q3:} $d^2$ has variance 10.20 (theory: $2d=10$), and a Kolmogorov--Smirnov test against $\chi^2_5$ gives $p=0.47$ (Figures~\ref{fig:d2hist}, \ref{fig:qq}). The distances are computed on the same points used to estimate $\hat\mu,\hat\Sigma$, so this $p$-value is a descriptive comparison, not an exact known-parameter test.
+\item \textbf{Q4:} $\hat\Sigma^{-1/2}$ is symmetric, $\hat\Sigma^{-1/2}\hat\Sigma\hat\Sigma^{-1/2}=I$, and the whitened training data have identity covariance. On the training data this holds by construction for any data with full-rank $X_c$, so it checks the implementation, not normality.
+\item \textbf{Q5:} the observed false-alarm rate matches $\alpha$ at all three levels for normal data (Table~\ref{tab:far}). These rates are measured on the training points; with $n=5000$ and $d=5$ the plug-in effect is negligible, and the held-out small-sample case is Part D (Assumption~\ref{as:large}).
+\item \textbf{Shifted attacks:} 28 of the 50 attack points exceed $\tau$, a detection rate of 0.56 at a false-alarm rate of 0.01.
+\item \textbf{Prop.~\ref{prop:meand}:} the mean of the training $d^2$ equals $d=5$ to floating-point precision. This is an algebraic identity, so it checks the code, not normality.
+\item \textbf{Assumption~\ref{as:normal}:} with $t_3$ data the false-alarm rate at $\alpha=0.01$ is 0.050, five times too high.
 \end{itemize}
 
-% ===========================================================================
-\section{Member Contributions}
-% ===========================================================================
-\todo{One or two sentences per member.}
+%=====================================================================
+\section{Member contributions}
+%=====================================================================
+\textbf{Bijun Wu} (Project Leader): wrote the notation and definitions, the proofs of Q1 and Q2, and the algorithm section; implemented \texttt{src/load.py} and \texttt{src/simulate.py}, produced the data description, figures and simulation tables; checked Kanchan's proofs of Q3--Q5, Proposition~\ref{prop:meand} and the hand-worked example.
+
+\textbf{Kanchan Patkar}: wrote the assumptions section, the proofs of Q3, Q4 and Q5 and Proposition~\ref{prop:meand}, and the hand-worked example; checked Bijun's proofs of Q1 and Q2, the definitions and the algorithm against the math.
+
+%=====================================================================
+\begin{thebibliography}{9}
+\bibitem{km09} K.~S. Killourhy and R.~A. Maxion. Comparing anomaly-detection algorithms for keystroke dynamics. \emph{IEEE/IFIP International Conference on Dependable Systems and Networks (DSN)}, 2009.
+\bibitem{bishop} C.~M. Bishop. \emph{Pattern Recognition and Machine Learning}. Springer, 2006.
+\bibitem{jw} R.~A. Johnson and D.~W. Wichern. \emph{Applied Multivariate Statistical Analysis}, 6th ed. Pearson, 2007.
+\bibitem{cookbook} K.~B. Petersen and M.~S. Pedersen. \emph{The Matrix Cookbook}.
+\bibitem{boyd} S.~Boyd and L.~Vandenberghe. \emph{Convex Optimization}. Cambridge University Press, 2004.
+\end{thebibliography}
 
 \end{document}

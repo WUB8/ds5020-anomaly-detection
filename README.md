@@ -20,7 +20,7 @@ d² = (x − μ)ᵀ Σ⁻¹ (x − μ), and flag a reading as anomalous when d²
 src/       Python code (data loading, simulation, method)
 data/      datasets (raw files are NOT committed — see below)
 figures/   plots produced by the scripts
-docs/      Overleaf report PDF and Excel project plan
+docs/      report PDF (report_iteration2.pdf), LaTeX source (report/main.tex), Excel project plan
 ```
 
 ## Setup
@@ -39,7 +39,7 @@ Simulation check (known true μ, Σ; verifies the Iteration 2 derivations):
 python3 src/simulate.py
 ```
 
-It prints the checks for each math question (Q1–Q5) and saves figures to `figures/`.
+It prints the checks for each math question (Q1–Q5), a heavy-tail check (Part C) and a small-sample check with n = 200, d = 21 (Part D), and saves figures to `figures/`.
 The random seed is fixed (`np.random.default_rng(0)`), so everyone gets the same numbers.
 
 ## Data

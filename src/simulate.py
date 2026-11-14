@@ -5,12 +5,15 @@ Project 9: Anomaly Detection with the Multivariate Normal Distribution
 Part A: a tiny 2-D example with round numbers that you can redo by hand.
 Part B: the main simulation (d = 5, n = 5000) where the true mu, Sigma are known.
 Part C: heavy-tailed data (t with 3 df) to show what breaks when normality fails.
+Part D: small sample (n = 200, d = 21, the real-data sizes) to show the plug-in
+        chi^2 threshold is too small, and that the exact F threshold fixes it.
 
 Each block is tagged with the Iteration 2 math question it checks:
   [Q1] MLEs of mu and Sigma              [Q2] Mahalanobis distance d^2 >= 0
   [Q3] d^2 ~ chi^2_d                     [Q4] Sigma^{-1/2} from Sigma = Q Lambda Q^T
   [Q5] threshold at chi^2 quantile gives false-alarm rate alpha
   [A2] Assumption 2 (normality) -- what breaks when it fails
+  [A5] Assumption 5 (large sample) -- what breaks when n is not >> d
 
 Run from the project root:  python3 src/simulate.py
 Figures are saved to figures/.
@@ -229,5 +232,40 @@ ax.axvline(tau, color="red", ls="--", label=rf"threshold $\tau$")
 ax.set_xlim(0, 40); ax.set_xlabel(r"$d^2$"); ax.set_ylabel("density"); ax.legend()
 ax.set_title(r"Heavy tails: $d^2$ no longer follows $\chi^2_5$")
 fig.tight_layout(); fig.savefig(FIG / "sim_d2_heavy_tail.png", dpi=150); plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Part D: small sample, n = 200, d = 21 (the real-data sizes)
+# [A5] Assumption 5 (large sample): Q3/Q5 are exact only for the TRUE mu, Sigma.
+# With plug-in estimates from n = 200 typings, the chi^2_d threshold is too small.
+# Each repetition fits on n training points and scores NEW (held-out) points.
+# ---------------------------------------------------------------------------
+header("PART D: small sample (d = 21, n = 200), held-out points  [A5 -> Q3, Q5]")
+dD, nD, reps, m_new = 21, 200, 200, 2000
+BD = rng.normal(size=(dD, dD)); SigmaD = BD @ BD.T + dD * np.eye(dD)
+muD = np.zeros(dD)
+alphas = (0.10, 0.05, 0.01)
+far_chi2 = np.zeros((reps, len(alphas)))
+far_F = np.zeros((reps, len(alphas)))
+for r in range(reps):
+    Xtr = rng.multivariate_normal(muD, SigmaD, size=nD)
+    Xnew = rng.multivariate_normal(muD, SigmaD, size=m_new)
+    mu_r, S_r = fit_mle(Xtr)
+    Sih_r, _, _ = inv_sqrt(S_r)
+    d2_new, _ = mahalanobis_sq(Xnew, mu_r, Sih_r)
+    # exact small-sample result for a new observation:
+    # T^2 = d^2 computed with the unbiased covariance n/(n-1) S_hat = (n-1)/n * d^2,
+    # and n(n-d) / (d(n+1)(n-1)) * T^2 ~ F_{d, n-d}
+    T2 = (nD - 1) / nD * d2_new
+    Fstat = nD * (nD - dD) / (dD * (nD + 1) * (nD - 1)) * T2
+    for k, a in enumerate(alphas):
+        far_chi2[r, k] = np.mean(d2_new > stats.chi2.ppf(1 - a, df=dD))
+        far_F[r, k] = np.mean(Fstat > stats.f.ppf(1 - a, dD, nD - dD))
+print(f"{reps} repetitions, each fitting on n = {nD} and scoring {m_new} new normal points")
+print(f"{'alpha':>8}{'chi2_d threshold':>18}{'F threshold':>14}")
+for k, a in enumerate(alphas):
+    print(f"{a:>8.2f}{far_chi2[:, k].mean():>18.4f}{far_F[:, k].mean():>14.4f}")
+print("-> with n = 200, d = 21 the plug-in chi^2 threshold gives too many false alarms;")
+print("   the exact F threshold restores the rate alpha")
 
 print(f"\nFigures saved to {FIG}")

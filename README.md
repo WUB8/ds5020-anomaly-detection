@@ -11,7 +11,7 @@ d² = (x − μ)ᵀ Σ⁻¹ (x − μ), and flag a reading as anomalous when d²
 
 | Member | Role |
 |---|---|
-| Bijun Wu | Implementation and Data Lead |
+| Bijun Wu (Project Leader)| Implementation and Data Lead |
 | Kanchan Patkar | Math and Derivations Lead |
 
 ## Repository structure

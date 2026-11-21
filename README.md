@@ -20,7 +20,7 @@ d² = (x − μ)ᵀ Σ⁻¹ (x − μ), and flag a reading as anomalous when d²
 src/       Python code (data loading, simulation, method)
 data/      datasets (raw files are NOT committed — see below)
 figures/   plots produced by the scripts
-docs/      report PDF (report_iteration2.pdf), LaTeX source (report/main.tex), Excel project plan
+docs/      report PDFs, LaTeX sources (report/ = Iteration 2, report_iteration3/ = Iteration 3), Excel project plan
 ```
 
 ## Setup
@@ -31,16 +31,41 @@ Requires Python 3 with `numpy`, `pandas`, `matplotlib` and `scipy`:
 pip install numpy pandas matplotlib scipy
 ```
 
+## Code (Iteration 3)
+
+| File | What it is |
+|---|---|
+| `src/methods.py` | The method from scratch (NumPy only, no `numpy.linalg`/SciPy). One `my_` function per algorithm step, with its equation in a comment: `my_mle`, `my_jacobi_eig`, `my_inv_sqrt`, `my_whiten_distance2`, `my_ldl`, `my_cholesky`, `my_forward_sub`, `my_mahalanobis2`, `my_inverse`, `my_threshold` (χ² quantile), `my_threshold_F` (small-sample F threshold), `my_decide`, `my_rates` |
+| `src/simulate.py` | Iteration 2 simulation model as functions: `simulate_normal(d, n, seed)`, `simulate_t(...)` (stress test), `add_duplicate_feature(X)` |
+| `src/diagnostics.py` | Checks only: `report()` comparison helper, verification-table rows, assumption checks, Q-Q plots |
+| `src/load.py` | Load and describe the real data |
+| `src/iteration2_check.py` | The Iteration 2 simulation script, unchanged, to reproduce the Iteration 2 numbers |
+
+`numpy.linalg`, SciPy and scikit-learn are used only in the scripts below, to check our answers.
+
 ## Running
 
-Simulation check (known true μ, Σ; verifies the Iteration 2 derivations):
+All scripts run from the project root. Seeds are fixed, so everyone gets the same numbers; figures go to `figures/`.
+
+The tiny example step by step (4 points in R², exact fractions; Iteration 3 Q1, Q2):
 
 ```bash
-python3 src/simulate.py
+python3 src/small_example.py
 ```
 
-It prints the checks for each math question (Q1–Q5), a heavy-tail check (Part C) and a small-sample check with n = 200, d = 21 (Part D), and saves figures to `figures/`.
-The random seed is fixed (`np.random.default_rng(0)`), so everyone gets the same numbers.
+The simulation test (truth and library comparisons, error against n, stress tests, assumption checks on simulated data):
+
+```bash
+python3 src/check_simulation.py
+```
+
+The real data and the library comparison (needs the data file, see below):
+
+```bash
+python3 src/run_real.py
+```
+
+Each script ends with the rows it contributes to the verification table in the report.
 
 ## Data
 

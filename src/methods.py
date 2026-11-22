@@ -184,8 +184,114 @@ def my_inverse(S):
 
 
 # ---------------------------------------------------------------------------
-# Step 6. Threshold (my_threshold, my_threshold_F): added in the next commit.
+# Step 6. Threshold  tau = chi^2_{d, 1-alpha}:  Pr(chi^2_d <= tau) = 1 - alpha
+# The chi^2_d CDF is the regularized lower incomplete gamma function
+#   F(t) = P(a, x),  a = d/2,  x = t/2,
+#   P(a, x) = e^{-x} x^a / Gamma(a) * sum_{k>=0} x^k / (a (a+1) ... (a+k))
+# and tau is found by bisection on F(t) = 1 - alpha.
 # ---------------------------------------------------------------------------
+def my_log_gamma_half(a):
+    """log Gamma(a) for a = k/2 > 0:  Gamma(1) = 1, Gamma(1/2) = sqrt(pi), Gamma(z+1) = z Gamma(z)."""
+    k2 = int(round(2 * a))
+    if k2 < 1 or abs(2 * a - k2) > 1e-9:
+        raise ValueError("a must be a positive multiple of 1/2")
+    z, out = (1.0, 0.0) if k2 % 2 == 0 else (0.5, 0.5 * np.log(np.pi))
+    while z < a - 1e-9:
+        out += np.log(z)
+        z += 1.0
+    return out
+
+
+def my_chi2_cdf(t, d):
+    if t <= 0:
+        return 0.0
+    a, x = d / 2.0, t / 2.0
+    term = 1.0 / a
+    total = term
+    k = 1
+    while term > 1e-17 * total and k < 100_000:
+        term *= x / (a + k)
+        total += term
+        k += 1
+    return float(np.exp(-x + a * np.log(x) - my_log_gamma_half(a)) * total)
+
+
+def my_bisect_quantile(cdf, p, hi=1.0, tol=1e-15):
+    """Solve cdf(t) = p for t >= 0 by bisection (cdf increasing)."""
+    lo = 0.0
+    while cdf(hi) < p:
+        lo, hi = hi, 2.0 * hi
+    for _ in range(200):
+        mid = 0.5 * (lo + hi)
+        if cdf(mid) < p:
+            lo = mid
+        else:
+            hi = mid
+        if hi - lo <= tol * hi:
+            break
+    return 0.5 * (lo + hi)
+
+
+def my_threshold(alpha, d):
+    """Step 6:  tau = chi^2_{d, 1-alpha}."""
+    return my_bisect_quantile(lambda t: my_chi2_cdf(t, d), 1.0 - alpha, hi=float(d))
+
+
+# ---------------------------------------------------------------------------
+# Small-sample threshold (Assumption 5, Iteration 2 Part D)
+# For a NEW observation and estimates from n training points,
+#   F = (n - d) / (d (n + 1)) * d^2  ~  F_{d, n-d},
+# so the threshold on d^2 is  tau_F = d (n + 1) / (n - d) * F_{d, n-d, 1-alpha}.
+# F_{d1,d2} CDF:  I_{u}(d1/2, d2/2) with u = d1 x / (d1 x + d2), the regularized
+# incomplete beta function, computed with its continued fraction (Lentz's method).
+# ---------------------------------------------------------------------------
+def _beta_cf(a, b, x, max_iter=1000, eps=1e-16):
+    tiny = 1e-300
+    qab, qap, qam = a + b, a + 1.0, a - 1.0
+    c, dd = 1.0, 1.0 - qab * x / qap
+    dd = 1.0 / (dd if abs(dd) > tiny else tiny)
+    h = dd
+    for m in range(1, max_iter + 1):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        dd = 1.0 + aa * dd; dd = 1.0 / (dd if abs(dd) > tiny else tiny)
+        c = 1.0 + aa / c; c = c if abs(c) > tiny else tiny
+        h *= dd * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        dd = 1.0 + aa * dd; dd = 1.0 / (dd if abs(dd) > tiny else tiny)
+        c = 1.0 + aa / c; c = c if abs(c) > tiny else tiny
+        delta = dd * c
+        h *= delta
+        if abs(delta - 1.0) < eps:
+            break
+    return h
+
+
+def my_beta_inc(a, b, x):
+    """Regularized incomplete beta I_x(a, b) for a, b multiples of 1/2."""
+    if x <= 0:
+        return 0.0
+    if x >= 1:
+        return 1.0
+    log_bt = (my_log_gamma_half(a + b) - my_log_gamma_half(a) - my_log_gamma_half(b)
+              + a * np.log(x) + b * np.log(1.0 - x))
+    if x < (a + 1.0) / (a + b + 2.0):
+        return float(np.exp(log_bt) * _beta_cf(a, b, x) / a)
+    return float(1.0 - np.exp(log_bt) * _beta_cf(b, a, 1.0 - x) / b)
+
+
+def my_f_cdf(x, d1, d2):
+    if x <= 0:
+        return 0.0
+    return my_beta_inc(d1 / 2.0, d2 / 2.0, d1 * x / (d1 * x + d2))
+
+
+def my_threshold_F(alpha, d, n):
+    """tau_F = d (n + 1) / (n - d) * F_{d, n-d, 1-alpha}   (needs n > d)."""
+    if n <= d:
+        raise ValueError("need n > d")
+    f_q = my_bisect_quantile(lambda t: my_f_cdf(t, d, n - d), 1.0 - alpha)
+    return d * (n + 1) / (n - d) * f_q
 
 
 # ---------------------------------------------------------------------------

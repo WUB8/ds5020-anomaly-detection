@@ -1,271 +1,62 @@
 """
-DS5020 Final Project - Iteration 2: Simulation Check
+DS5020 Final Project - Iteration 3: simulation model as functions
 Project 9: Anomaly Detection with the Multivariate Normal Distribution
 
-Part A: a tiny 2-D example with round numbers that you can redo by hand.
-Part B: the main simulation (d = 5, n = 5000) where the true mu, Sigma are known.
-Part C: heavy-tailed data (t with 3 df) to show what breaks when normality fails.
-Part D: small sample (n = 200, d = 21, the real-data sizes) to show the plug-in
-        chi^2 threshold is too small, and that the exact F threshold fixes it.
+Same model, parameter values and seed as Iteration 2 (Part B):
+    B ~ N(0, 1) entries (d x d),  Sigma = B B^T + d I,  mu = 0,
+    x_i ~ N(mu, Sigma) iid,  rng = np.random.default_rng(seed), seed = 0.
+simulate_normal(d=5, n=5000, seed=0) returns exactly the Iteration 2 data X.
 
-Each block is tagged with the Iteration 2 math question it checks:
-  [Q1] MLEs of mu and Sigma              [Q2] Mahalanobis distance d^2 >= 0
-  [Q3] d^2 ~ chi^2_d                     [Q4] Sigma^{-1/2} from Sigma = Q Lambda Q^T
-  [Q5] threshold at chi^2 quantile gives false-alarm rate alpha
-  [A2] Assumption 2 (normality) -- what breaks when it fails
-  [A5] Assumption 5 (large sample) -- what breaks when n is not >> d
-
-Run from the project root:  python3 src/simulate.py
-Figures are saved to figures/.
+The random draws are made row by row, so for a fixed seed the first n rows are the
+same for every sample size: simulate_normal(n=500)[0] == simulate_normal(n=5000)[0][:500].
+The truth (mu, Sigma) depends only on d and the seed, so it is the same for every n.
 """
-from pathlib import Path
-
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from scipy import stats
-
-ROOT = Path(__file__).resolve().parent.parent
-FIG = ROOT / "figures"
-FIG.mkdir(exist_ok=True)
-np.set_printoptions(precision=4, suppress=True)
 
 
-# ---------------------------------------------------------------------------
-# Core method (written from scratch, numpy only)
-# ---------------------------------------------------------------------------
-def fit_mle(X):
-    """[Q1] MLEs of a multivariate normal. Note 1/n (MLE), not 1/(n-1)."""
-    n = X.shape[0]
-    mu_hat = X.mean(axis=0)                 # (1/n) X^T 1
-    Xc = X - mu_hat
-    S_hat = Xc.T @ Xc / n                   # (1/n) Xc^T Xc
-    return mu_hat, S_hat
+def _truth(rng, d):
+    B = rng.normal(size=(d, d))
+    Sigma = B @ B.T + d * np.eye(d)          # symmetric positive definite by construction
+    mu = np.zeros(d)
+    return mu, Sigma
 
 
-def inv_sqrt(S):
-    """[Q4] S^{-1/2} = Q Lambda^{-1/2} Q^T from the eigendecomposition S = Q Lambda Q^T."""
-    lam, Q = np.linalg.eigh(S)
-    if lam.min() <= 0:                      # [Q2] needs Sigma positive definite
-        raise ValueError("Sigma is not positive definite")
-    return Q @ np.diag(lam ** -0.5) @ Q.T, lam, Q
+def simulate_normal(d=5, n=5000, seed=0, rep=None):
+    """Iteration 2 model. Returns X (n x d), the true mu and the true Sigma.
+    rep=None: data drawn from the same generator as the truth (exactly Iteration 2).
+    rep=r:    same truth (from seed), new independent data set number r, for repeated
+              experiments with a fixed mu and Sigma."""
+    rng = np.random.default_rng(seed)
+    mu, Sigma = _truth(rng, d)
+    if rep is not None:
+        rng = np.random.default_rng([seed, rep])
+    X = rng.multivariate_normal(mu, Sigma, size=n)
+    return X, mu, Sigma
 
 
-def mahalanobis_sq(X, mu, S_inv_half):
-    """[Q2][Q3] d^2 = (x - mu)^T S^{-1} (x - mu) = ||S^{-1/2}(x - mu)||^2."""
-    Z = (X - mu) @ S_inv_half              # [Q3] whitening z = S^{-1/2}(x - mu); symmetric, so fine
-    return np.sum(Z ** 2, axis=1), Z
+def simulate_t(d=5, n=5000, nu=3, seed=0):
+    """Stress test (Assumption 2 broken): multivariate t with nu degrees of freedom,
+    x = mu + y / sqrt(w / nu),  y ~ N(0, Sigma),  w ~ chi^2_nu.
+    Same mu, Sigma (scale matrix) as simulate_normal for the same d and seed.
+    Note Cov(x) = nu / (nu - 2) * Sigma for nu > 2."""
+    rng = np.random.default_rng(seed)
+    mu, Sigma = _truth(rng, d)
+    Y = rng.multivariate_normal(np.zeros(d), Sigma, size=n)
+    w = rng.chisquare(nu, size=n)
+    X = mu + Y / np.sqrt(w / nu)[:, None]
+    return X, mu, Sigma
 
 
-def log_lik(X, mu, S):
-    """[Q1] l(mu, S) = -n d/2 log(2 pi) - n/2 log|S| - 1/2 sum (x_i-mu)^T S^{-1} (x_i-mu)."""
-    n, d = X.shape
-    Xc = X - mu
-    _, logdet = np.linalg.slogdet(S)
-    quad = np.sum(Xc @ np.linalg.inv(S) * Xc)
-    return -0.5 * n * d * np.log(2 * np.pi) - 0.5 * n * logdet - 0.5 * quad
+def add_duplicate_feature(X, j=0):
+    """Stress test (Assumption 3 broken): append an exact copy of feature j,
+    so the columns of X_c are linearly dependent and Sigma_hat is singular."""
+    return np.column_stack([X, X[:, j]])
 
 
-def header(title):
-    print("\n" + "=" * 70 + f"\n{title}\n" + "=" * 70)
-
-
-# ---------------------------------------------------------------------------
-# Part A: hand-worked 2-D example
-# ---------------------------------------------------------------------------
-header("PART A: hand-worked example (d = 2, n = 4)")
-Xh = np.array([[1.0, 2.0],
-               [3.0, 4.0],
-               [5.0, 4.0],
-               [3.0, 6.0]])
-print("data X =\n", Xh)
-
-# [Q1] Steps 1-3: mean, centring, covariance (1/n)
-mu_h, S_h = fit_mle(Xh)
-print("\n[Q1] mu_hat       =", mu_h, "   (expect [3, 4])")
-print("[Q1] centred Xc =\n", Xh - mu_h)
-print("[Q1] Sigma_hat =\n", S_h, "   (expect [[2, 1], [1, 2]])")
-
-# [Q4] Steps 4-8: eigenvalues, eigenvectors, inverse, inverse square root
-# [Q2] Step 6: all eigenvalues > 0  =>  Sigma_hat positive definite
-Sih_h, lam_h, Q_h = inv_sqrt(S_h)
-print("\n[Q4] eigenvalues  =", lam_h, "   (expect 1 and 3)")
-print(f"[Q2] all eigenvalues > 0 (positive definite): {bool(lam_h.min() > 0)}")
-print("[Q4] eigenvectors Q =\n", Q_h, "   (expect (1,-1)/sqrt2 and (1,1)/sqrt2, up to sign)")
-print("[Q4] Sigma_hat^{-1} =\n", np.linalg.inv(S_h), "   (expect (1/3)[[2,-1],[-1,2]])")
-print("[Q4] Sigma_hat^{-1/2} =\n", Sih_h)
-print("[Q4] check (S^{-1/2})^2 = S^{-1}:", np.allclose(Sih_h @ Sih_h, np.linalg.inv(S_h)))
-
-# [Q2][Q4] Step 9: score two test points with the same Euclidean distance
-tests = np.array([[5.0, 6.0], [5.0, 2.0]])
-d2_h, _ = mahalanobis_sq(tests, mu_h, Sih_h)
-eucl = np.linalg.norm(tests - mu_h, axis=1)
-print()
-for x, e, m in zip(tests, eucl, d2_h):
-    print(f"[Q2] x = {x}:  Euclidean dist = {e:.4f},  Mahalanobis d^2 = {m:.4f}")
-print("   (expect d^2 = 8/3 = 2.6667 and 8; same Euclidean distance sqrt(8))")
-
-# [Q5] Step 10: threshold tau = chi^2_{2, 1-alpha} (= -2 ln alpha for d = 2) and decision
-print()
-for a in (0.05, 0.01):
-    tau = stats.chi2.ppf(1 - a, df=2)
-    print(f"[Q5] alpha = {a}: tau = {tau:.4f} (-2 ln alpha = {-2 * np.log(a):.4f})"
-          f"  -> flagged: {d2_h > tau}")
-
-# Bonus: mean of d^2 over the training points is exactly d (= 2)
-d2_train, _ = mahalanobis_sq(Xh, mu_h, Sih_h)
-print(f"\n[Bonus] training d^2 = {d2_train}, mean = {d2_train.mean():.4f}   (expect d = 2)")
-
-
-# ---------------------------------------------------------------------------
-# Part B: main simulation with known truth
-# ---------------------------------------------------------------------------
-header("PART B: main simulation (d = 5, n = 5000, alpha = 0.01)")
-rng = np.random.default_rng(0)
-d, n, alpha = 5, 5000, 0.01
-B = rng.normal(size=(d, d))
-Sigma = B @ B.T + d * np.eye(d)            # symmetric positive definite by construction
-mu = np.zeros(d)
-X = rng.multivariate_normal(mu, Sigma, size=n)
-
-# [Q1] MLEs vs truth
-mu_hat, S_hat = fit_mle(X)
-print("\n[Q1] MLE vs truth")
-print(f"{'param':<14}{'true':>10}{'estimate':>12}{'abs err':>10}")
-for i in range(d):
-    print(f"{'mu_' + str(i + 1):<14}{mu[i]:>10.4f}{mu_hat[i]:>12.4f}{abs(mu_hat[i] - mu[i]):>10.4f}")
-for i in range(d):
-    print(f"{'Sigma_' + f'{i + 1}{i + 1}':<14}{Sigma[i, i]:>10.4f}{S_hat[i, i]:>12.4f}"
-          f"{abs(S_hat[i, i] - Sigma[i, i]):>10.4f}")
-rel = np.linalg.norm(S_hat - Sigma) / np.linalg.norm(Sigma)
-print(f"relative Frobenius error ||S_hat - Sigma|| / ||Sigma|| = {rel:.4f}")
-print("MLE (1/n) vs np.cov (1/(n-1)) ratio:", np.round((S_hat / np.cov(X.T)).mean(), 6),
-      f"(expect (n-1)/n = {(n - 1) / n:.6f})")
-
-# [Q1] the MLE should maximise the log-likelihood -> any perturbation lowers it
-ll_star = log_lik(X, mu_hat, S_hat)
-worse = []
-for _ in range(20):
-    dm = 0.05 * rng.normal(size=d)
-    E = 0.05 * rng.normal(size=(d, d)); E = E @ E.T
-    worse.append(log_lik(X, mu_hat + dm, S_hat + E) < ll_star)
-print(f"log-lik at MLE = {ll_star:.2f}; 20 random perturbations all lower: {all(worse)}")
-
-# [Q2] Mahalanobis distance non-negative when Sigma is PD
-S_inv_half, lam, Q = inv_sqrt(S_hat)
-d2, Z = mahalanobis_sq(X, mu_hat, S_inv_half)
-print("\n[Q2] eigenvalues of Sigma_hat (all > 0 => PD):", lam)
-print(f"     min d^2 = {d2.min():.6f}  (>= 0: {bool(d2.min() >= 0)})")
-d2_direct = np.einsum("ij,jk,ik->i", X - mu_hat, np.linalg.inv(S_hat), X - mu_hat)
-print(f"     d^2 via Sigma^-1 equals d^2 via ||Z||^2: {np.allclose(d2, d2_direct)}")
-
-# [Q4] Sigma^{-1/2} from the eigendecomposition; whitening
-print("\n[Q4] Q^T Q = I:", np.allclose(Q.T @ Q, np.eye(d)),
-      "| Q Lambda Q^T = Sigma_hat:", np.allclose(Q @ np.diag(lam) @ Q.T, S_hat))
-print("     S^{-1/2} symmetric:", np.allclose(S_inv_half, S_inv_half.T),
-      "| S^{-1/2} S S^{-1/2} = I:", np.allclose(S_inv_half @ S_hat @ S_inv_half, np.eye(d)))
-print("     cov(Z) (should be identity):\n", np.cov(Z.T, bias=True).round(4))
-
-# [Q3] d^2 ~ chi^2_d
-print(f"\n[Q3] mean of d^2 = {d2.mean():.4f} (chi2_{d} mean = {d})")
-print(f"     var  of d^2 = {d2.var():.4f} (chi2_{d} var  = {2 * d})")
-ks = stats.kstest(d2, "chi2", args=(d,))
-print(f"     KS test vs chi2_{d}: statistic = {ks.statistic:.4f}, p-value = {ks.pvalue:.4f}")
-
-# [Q5] false-alarm rate at the (1 - alpha) quantile
-print("\n[Q5] false-alarm rate on normal data")
-print(f"{'alpha':>8}{'tau':>10}{'observed':>12}")
-for a in (0.10, 0.05, 0.01):
-    tau_a = stats.chi2.ppf(1 - a, df=d)
-    print(f"{a:>8.2f}{tau_a:>10.4f}{np.mean(d2 > tau_a):>12.4f}")
-tau = stats.chi2.ppf(1 - alpha, df=d)
-
-# [Q5] detection of shifted "attacks" (the other side of the threshold trade-off)
-attacks = rng.multivariate_normal(mu + 4, Sigma, size=50)
-d2a, _ = mahalanobis_sq(attacks, mu_hat, S_inv_half)
-print(f"\n[Q5] detection rate on 50 attacks (mean shifted by +4): {np.mean(d2a > tau):.2f}")
-
-# [Q3][Q5] Figure: histogram of d^2 vs chi^2_d density, with threshold tau
-grid = np.linspace(0, max(d2.max(), d2a.max()) * 1.02, 400)
-fig, ax = plt.subplots(figsize=(7, 4))
-ax.hist(d2, bins=80, density=True, alpha=0.6, label=r"simulated $d^2$ (normal data)")
-ax.plot(grid, stats.chi2.pdf(grid, df=d), "k-", lw=2, label=rf"$\chi^2_{d}$ density")
-ax.axvline(tau, color="red", ls="--", label=rf"threshold $\tau$ ($\alpha$={alpha})")
-ax.set_xlim(0, 40)
-ax.set_xlabel(r"$d^2$"); ax.set_ylabel("density"); ax.legend()
-ax.set_title(r"Q3: squared Mahalanobis distance vs $\chi^2_5$")
-fig.tight_layout(); fig.savefig(FIG / "sim_d2_hist.png", dpi=150); plt.close(fig)
-
-# [Q3] Figure: Q-Q plot of d^2 vs chi^2_d
-probs = (np.arange(1, n + 1) - 0.5) / n
-fig, ax = plt.subplots(figsize=(5, 5))
-ax.plot(stats.chi2.ppf(probs, df=d), np.sort(d2), ".", ms=2)
-lim = stats.chi2.ppf(probs[-1], df=d)
-ax.plot([0, lim], [0, lim], "r-")
-ax.set_xlabel(rf"$\chi^2_{d}$ quantiles"); ax.set_ylabel(r"sorted $d^2$")
-ax.set_title("Q-Q plot (normal data)")
-fig.tight_layout(); fig.savefig(FIG / "sim_d2_qq.png", dpi=150); plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
-# Part C: heavy tails break the chi^2 threshold
-# [A2] if normality fails, Q3 (d^2 ~ chi^2_d) fails, so Q5 (rate = alpha) fails
-# ---------------------------------------------------------------------------
-header("PART C: heavy-tailed data (multivariate t, 3 df)  [A2 -> Q3, Q5]")
-nu = 3
-W = rng.chisquare(nu, size=n)
-Xt = mu + rng.multivariate_normal(np.zeros(d), Sigma, size=n) / np.sqrt(W / nu)[:, None]
-mu_t, S_t = fit_mle(Xt)
-Sih_t, _, _ = inv_sqrt(S_t)
-d2t, _ = mahalanobis_sq(Xt, mu_t, Sih_t)
-print(f"{'alpha':>8}{'normal data':>14}{'t_3 data':>12}")
-for a in (0.10, 0.05, 0.01):
-    tau_a = stats.chi2.ppf(1 - a, df=d)
-    print(f"{a:>8.2f}{np.mean(d2 > tau_a):>14.4f}{np.mean(d2t > tau_a):>12.4f}")
-print("-> with heavy tails the false-alarm rate is no longer alpha")
-
-fig, ax = plt.subplots(figsize=(7, 4))
-ax.hist(d2t[d2t < 40], bins=80, density=True, alpha=0.6, label=r"$d^2$ ($t_3$ data)")
-ax.plot(grid, stats.chi2.pdf(grid, df=d), "k-", lw=2, label=rf"$\chi^2_{d}$ density")
-ax.axvline(tau, color="red", ls="--", label=rf"threshold $\tau$")
-ax.set_xlim(0, 40); ax.set_xlabel(r"$d^2$"); ax.set_ylabel("density"); ax.legend()
-ax.set_title(r"Heavy tails: $d^2$ no longer follows $\chi^2_5$")
-fig.tight_layout(); fig.savefig(FIG / "sim_d2_heavy_tail.png", dpi=150); plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
-# Part D: small sample, n = 200, d = 21 (the real-data sizes)
-# [A5] Assumption 5 (large sample): Q3/Q5 are exact only for the TRUE mu, Sigma.
-# With plug-in estimates from n = 200 typings, the chi^2_d threshold is too small.
-# Each repetition fits on n training points and scores NEW (held-out) points.
-# ---------------------------------------------------------------------------
-header("PART D: small sample (d = 21, n = 200), held-out points  [A5 -> Q3, Q5]")
-dD, nD, reps, m_new = 21, 200, 200, 2000
-BD = rng.normal(size=(dD, dD)); SigmaD = BD @ BD.T + dD * np.eye(dD)
-muD = np.zeros(dD)
-alphas = (0.10, 0.05, 0.01)
-far_chi2 = np.zeros((reps, len(alphas)))
-far_F = np.zeros((reps, len(alphas)))
-for r in range(reps):
-    Xtr = rng.multivariate_normal(muD, SigmaD, size=nD)
-    Xnew = rng.multivariate_normal(muD, SigmaD, size=m_new)
-    mu_r, S_r = fit_mle(Xtr)
-    Sih_r, _, _ = inv_sqrt(S_r)
-    d2_new, _ = mahalanobis_sq(Xnew, mu_r, Sih_r)
-    # exact small-sample result for a new observation:
-    # T^2 = d^2 computed with the unbiased covariance n/(n-1) S_hat = (n-1)/n * d^2,
-    # and n(n-d) / (d(n+1)(n-1)) * T^2 ~ F_{d, n-d}
-    T2 = (nD - 1) / nD * d2_new
-    Fstat = nD * (nD - dD) / (dD * (nD + 1) * (nD - 1)) * T2
-    for k, a in enumerate(alphas):
-        far_chi2[r, k] = np.mean(d2_new > stats.chi2.ppf(1 - a, df=dD))
-        far_F[r, k] = np.mean(Fstat > stats.f.ppf(1 - a, dD, nD - dD))
-print(f"{reps} repetitions, each fitting on n = {nD} and scoring {m_new} new normal points")
-print(f"{'alpha':>8}{'chi2_d threshold':>18}{'F threshold':>14}")
-for k, a in enumerate(alphas):
-    print(f"{a:>8.2f}{far_chi2[:, k].mean():>18.4f}{far_F[:, k].mean():>14.4f}")
-print("-> with n = 200, d = 21 the plug-in chi^2 threshold gives too many false alarms;")
-print("   the exact F threshold restores the rate alpha")
-
-print(f"\nFigures saved to {FIG}")
+if __name__ == "__main__":
+    X, mu, Sigma = simulate_normal()
+    print("simulate_normal(d=5, n=5000, seed=0):", X.shape)
+    print("true mu =", mu)
+    print("true Sigma =\n", Sigma.round(4))
+    X500, _, _ = simulate_normal(n=500)
+    print("first 500 rows identical to n=500 run:", np.array_equal(X[:500], X500))

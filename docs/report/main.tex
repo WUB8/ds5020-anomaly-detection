@@ -243,7 +243,7 @@ $n\gg d$, so that $\hat\mu\approx\mu$ and $\hat\Sigma\approx\Sigma$.
 \end{assumption}
 \noindent\textit{If it fails:} Q3 is exact only for the true $\mu,\Sigma$; with plug-in estimates the distribution of $d^2$ is only approximately $\chi^2_d$, and the false-alarm rate drifts away from $\alpha$. Here $n=200$ and $d=21$, so $\hat\Sigma$ has $d(d+1)/2=231$ free entries estimated from 200 vectors, with $n/d\approx9.5$. This sample size is borderline and gives another reason to exclude the redundant features.
 
-\noindent\textit{Check:} A simulation with $n=200$, $d=21$ (\texttt{src/simulate.py}, Part D: normal data, 200 repetitions, each fitting on 200 points and scoring 2000 new points) gives false-alarm rates of 0.21, 0.13 and 0.043 for $\alpha=0.10,0.05,0.01$, about two to four times too high. At this sample size, the plug-in $\chi^2_d$ threshold is too small. The exact small-sample result for a new observation,
+\noindent\textit{Check:} A simulation with $n=200$, $d=21$ (\texttt{src/iteration2\_check.py}, Part D: normal data, 200 repetitions, each fitting on 200 points and scoring 2000 new points) gives false-alarm rates of 0.21, 0.13 and 0.043 for $\alpha=0.10,0.05,0.01$, about two to four times too high. At this sample size, the plug-in $\chi^2_d$ threshold is too small. The exact small-sample result for a new observation,
 $\frac{n(n-d)}{d(n+1)(n-1)}T^2\sim F_{d,\,n-d}$, where $T^2$ uses the unbiased covariance $\frac{n}{n-1}\hat\Sigma$, restores the rate: the same simulation gives 0.100, 0.050 and 0.010 with the $F$ threshold. In Iteration 3 we will compare both thresholds on the real data. We will measure the real-data false-alarm rate on held-out genuine typings (sessions 5--8), because on the training data the mean of $d^2$ is exactly $d$ by construction (Proposition~\ref{prop:meand}).
 
 %=====================================================================
@@ -543,7 +543,7 @@ Both have Euclidean distance $\sqrt8\approx2.83$ from $\hat\mu$.
 
 \textbf{Check of Prop.~\ref{prop:meand}.} The training distances are $d^2(x_1)=\tfrac13(8-8+8)=\tfrac83$, $d^2(x_2)=0$, $d^2(x_3)=\tfrac13\cdot8=\tfrac83$, $d^2(x_4)=\tfrac13\cdot8=\tfrac83$; their mean is $\tfrac14\cdot8=2=d$.
 
-These numbers match the output of \texttt{src/simulate.py}, Part A.
+These numbers match the output of \texttt{src/iteration2\_check.py}, Part A.
 
 %=====================================================================
 \section{Algorithm}

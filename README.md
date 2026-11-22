@@ -9,15 +9,15 @@ d² = (x − μ)ᵀ Σ⁻¹ (x − μ), and flag a reading as anomalous when d²
 
 ## Team
 
-| Member | Role |
-|---|---|
-| Bijun Wu (Project Leader)| Implementation and Data Lead |
-| Kanchan Patkar | Math and Derivations Lead (Team leader)|
+| Member | Role | Project Leader |
+|---|---|---|
+| Bijun Wu | Implementation and Data Lead | Iteration 2 |
+| Kanchan Patkar | Math and Derivations Lead | Iteration 3 |
 
 ## Repository structure
 
 ```
-src/       Python code (data loading, simulation, metho d)
+src/       Python code (data loading, simulation, method)
 data/      datasets (raw files are NOT committed — see below)
 figures/   plots produced by the scripts
 docs/      report PDFs, LaTeX sources (report/ = Iteration 2, report_iteration3/ = Iteration 3), Excel project plan
